@@ -49,7 +49,7 @@
   /* ================= 3. CSS VARIABLES — EDIT PALETTE HERE ================= */
   :root{
     /* --- CONFIG: swap this to change the background photo --- */
-    --bg-image: url('images/background.webp');
+    --bg-image: url('https://raw.githubusercontent.com/nitesh230github/medical-store-playlist/main/images/background.png');
 
     /* colors */
     --ink-deep:    #06231F;   /* near-black teal, used only in small doses */
@@ -160,16 +160,18 @@
   .topbar-row2{
     text-align:center;
     padding: 6px 16px 14px;
-    font-family: var(--font-display);
-    font-style: italic;
-    font-weight:600;
-    font-size: 22px;
-    letter-spacing: 0.03em;
-    text-transform: none;           /* was uppercase; italic serif reads better in normal case */
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-weight:700;
+    font-size: 20px;
+    letter-spacing: 0.28em;          /* wide tracking = prescription-label feel */
+    text-transform: uppercase;
     text-decoration: underline;
-    text-decoration-color: var(--accent-red);
+    text-decoration-style: dashed;   /* dashed instead of solid = matches the
+                                         perforation / ECG motif elsewhere */
+    text-decoration-color: var(--accent-mint);
     text-decoration-thickness: 2px;
-    text-underline-offset: 5px;
+    text-underline-offset: 6px;
     color: var(--cream);
     text-shadow: 0 1px 6px rgba(0,0,0,0.6);
   }
@@ -208,7 +210,6 @@
     display:inline-flex;
     align-items:center;
     gap:6px;
-    margin-top:24px;
     padding: 7px 16px;
     border: 1px solid var(--accent-red);
     border-radius: 999px;
@@ -227,7 +228,9 @@
     bottom: 46px;                 /* moved further up from the bottom edge */
     z-index:5;
     display:flex;
-    justify-content:center;
+    flex-direction:column;        /* stamp stacks above the capsule */
+    align-items:center;
+    gap: 12px;                    /* the "gap" between stamp and capsule */
     padding: 0 16px;
   }
 
@@ -386,17 +389,19 @@
     </div>
 
     <!-- HEADER row 2: tagline, sits below the dashed divider -->
-    <div class="topbar-row2">Medical Store &middot; Dawakhana Radio</div>
+    <div class="topbar-row2">Dawakhana Radio &middot; 24x7</div>
   </header>
 
   <!-- CENTER: Hindi brand title, pinned higher on the page -->
   <main class="center">
     <h1 class="brand">मेडिकल स्टोर</h1>
-    <div class="stamp">Rx &middot; now playing</div>
   </main>
 
-  <!-- BOTTOM: floating capsule player (thumbnail, title/artist, controls) -->
+  <!-- BOTTOM: "Rx · now playing" stamp sits above the capsule with a gap,
+       then the floating capsule player (thumbnail, title/artist, controls) -->
   <div class="capsule-wrap">
+    <div class="stamp">Rx &middot; now playing</div>
+
     <div class="capsule">
       <div class="capsule-art">
         <img id="albumArt" src="" alt="Now playing artwork" />

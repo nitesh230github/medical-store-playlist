@@ -10,15 +10,19 @@
   =====================================================================
   MEDICAL STORE — background music jukebox
   ---------------------------------------------------------------------
-  v2 changes from the first version:
-    - Background image is now fully visible (removed the solid dark-teal
-      wash; only a light top/bottom vignette remains, just enough to
-      keep text/capsule readable).
-    - Player moved out of the center card into a floating capsule
-      pinned to the bottom-center of the screen (like saloon.wtf):
-      thumbnail + song title/artist + prev/play/next, all in one pill.
-    - Center of the page now just has the brand title, tagline and the
-      "Rx" stamp — nothing else competing with the background photo.
+  v3 changes from v2:
+    - Header restructured into two rows:
+        row 1 (above the dashed line) = live clock (left) · online
+              count (true center, via grid) · playlist link (right)
+        row 2 (below the dashed line) = "medical store · dawakhana
+              radio" tagline, centered
+    - Center brand title changed to Hindi "मेडिकल स्टोर" and moved
+      higher up the page.
+    - Bottom capsule player:
+        - taller + more internal spacing so prev/play/next/mute
+          buttons don't overlap each other on mobile taps
+        - added a mute/unmute (speaker) button
+        - moved further up from the bottom edge
 
   FILE MAP (search for these markers to edit fast):
     1. CONFIG        -> playlist id, brand name, background image
@@ -28,16 +32,17 @@
     5. HTML          -> page markup
     6. JS - CONFIG   -> same config values, used by the script
     7. JS - YOUTUBE  -> loads YouTube IFrame API, plays the playlist
-    8. JS - UI LOGIC -> play/pause, next/prev, progress bar, online count
+    8. JS - UI LOGIC -> play/pause, mute, next/prev, progress, clock
   =====================================================================
 -->
 
 <!-- ============ 2. FONTS ============
      Fraunces = warm serif for the big brand title (display face)
+     Noto Serif Devanagari = matching serif for the Hindi title
      JetBrains Mono = "prescription label" utility face for small text -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Noto+Serif+Devanagari:wght@500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
 <style>
 
@@ -47,10 +52,9 @@
     --bg-image: url('https://raw.githubusercontent.com/nitesh230github/medical-store-playlist/main/images/background.png');
 
     /* colors */
-    --ink-deep:    #06231F;   /* near-black teal, used only in small doses now */
+    --ink-deep:    #06231F;   /* near-black teal, used only in small doses */
     --cream:       #F6F3E9;   /* prescription-pad paper color, main text */
-    --muted:       #CFE0DB;   /* secondary text / labels (brighter now, since
-                                  it sits directly on the photo, not a dark card) */
+    --muted:       #CFE0DB;   /* secondary text / labels */
     --accent-red:  #E14B3D;   /* "medical cross" red — play button, tag */
     --accent-mint: #79E6C4;   /* pulse-line green — ECG, active states  */
     --line:        rgba(246,243,233,0.22); /* hairline dividers */
@@ -61,6 +65,7 @@
 
     /* type */
     --font-display: 'Fraunces', Georgia, serif;
+    --font-hindi: 'Noto Serif Devanagari', 'Fraunces', serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
@@ -78,10 +83,7 @@
     position:relative;
     overflow-x:hidden;
 
-    /* ---- background photo, now nearly untouched ----
-       Only a soft vignette at the very top (for the header bar) and
-       very bottom (for the capsule) so text stays legible — the
-       middle of the photo is shown almost at full strength. */
+    /* background photo, only a soft vignette top/bottom for legibility */
     background-image:
       linear-gradient(180deg, rgba(6,35,31,0.40) 0%, rgba(6,35,31,0.05) 22%, rgba(6,35,31,0.05) 70%, rgba(6,35,31,0.55) 100%),
       var(--bg-image);
@@ -95,15 +97,37 @@
     position:fixed;
     top:0; left:0; right:0;
     z-index:5;
-    display:flex;
+  }
+
+  /* row 1: clock | online count (true center) | playlist link
+     3-column grid so the center item stays centered regardless of
+     how wide the left/right items are */
+  .topbar-row1{
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items:center;
-    justify-content:space-between;
-    padding: 18px 28px;
+    padding: 16px 28px 12px;
     font-size: 12px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     border-bottom: 1px dashed var(--line);
   }
+
+  .live-clock{
+    justify-self:start;
+    color: var(--muted);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    font-variant-numeric: tabular-nums; /* keeps digits from jittering in width */
+  }
+
+  .online-count{
+    justify-self:center;
+    display:flex;
+    align-items:center;
+    color: var(--muted);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+  .online-count b{ color: var(--cream); font-weight:700; margin-left:4px; }
 
   /* pulse/heartbeat dot next to the "online" count */
   .pulse-dot{
@@ -121,19 +145,26 @@
     100% { box-shadow: 0 0 0 0 rgba(121,230,196,0); }
   }
 
-  .online-count{ display:flex; align-items:center; color: var(--muted); text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
-  .online-count b{ color: var(--cream); font-weight:700; margin-left:4px; }
-
-  .rx-tag{ color: var(--muted); text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
-
-  .topbar a{
+  .topbar-row1 a{
+    justify-self:end;
     color: var(--cream);
     text-decoration:none;
     border-bottom: 1px solid var(--accent-red);
     padding-bottom: 2px;
     text-shadow: 0 1px 6px rgba(0,0,0,0.6);
   }
-  .topbar a:hover{ color: var(--accent-mint); border-color: var(--accent-mint); }
+  .topbar-row1 a:hover{ color: var(--accent-mint); border-color: var(--accent-mint); }
+
+  /* row 2: tagline, sits BELOW the dashed line */
+  .topbar-row2{
+    text-align:center;
+    padding: 8px 16px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
 
   /* ================= CENTER CONTENT (brand only, page kept quiet) ================= */
   .center{
@@ -141,36 +172,28 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
+    justify-content:flex-start;  /* pinned toward the top instead of true center */
     text-align:center;
-    padding: 100px 24px 180px; /* bottom padding keeps title clear of the capsule */
+    padding: 130px 24px 220px; /* top padding controls how high the title sits;
+                                   bottom padding keeps it clear of the capsule */
   }
 
   .brand{
-    font-family: var(--font-display);
+    font-family: var(--font-hindi);
     font-weight:600;
-    font-size: clamp(42px, 9vw, 64px);
+    font-size: clamp(40px, 9vw, 62px);
     letter-spacing: 0.01em;
-    line-height:1;
+    line-height:1.15;
     color: var(--cream);
     text-shadow: 0 4px 24px rgba(0,0,0,0.55); /* keeps title readable over any photo */
   }
 
-  .tagline{
-    margin-top:12px;
-    font-size:12px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    color: var(--muted);
-    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
-  }
-
-  /* small "Rx" stamp badge under the tagline */
+  /* small "Rx" stamp badge under the title */
   .stamp{
     display:inline-flex;
     align-items:center;
     gap:6px;
-    margin-top:22px;
+    margin-top:20px;
     padding: 5px 12px;
     border: 1px solid var(--accent-red);
     border-radius: 999px;
@@ -185,7 +208,7 @@
   .capsule-wrap{
     position:fixed;
     left:0; right:0;
-    bottom: 22px;
+    bottom: 46px;                 /* moved further up from the bottom edge */
     z-index:5;
     display:flex;
     justify-content:center;
@@ -195,10 +218,11 @@
   .capsule{
     display:flex;
     align-items:center;
-    gap:14px;
-    max-width: 480px;
+    gap:16px;
+    max-width: 520px;
     width:100%;
-    padding: 8px 18px 8px 8px;
+    min-height: 76px;             /* taller capsule = more room between buttons */
+    padding: 12px 20px 12px 12px;
     border-radius: 999px;
     background: var(--capsule-bg);
     backdrop-filter: blur(var(--capsule-blur));
@@ -208,8 +232,8 @@
   }
 
   .capsule-art{
-    width: 46px;
-    height: 46px;
+    width: 54px;
+    height: 54px;
     border-radius: 999px;         /* round thumbnail = capsule/tablet feel */
     overflow:hidden;
     flex-shrink:0;
@@ -227,7 +251,7 @@
     min-width:0; /* required so text-overflow ellipsis works in a flex child */
     display:flex;
     flex-direction:column;
-    gap: 3px;
+    gap: 4px;
   }
   .capsule-title{
     font-family: var(--font-display);
@@ -250,7 +274,7 @@
   .capsule-progress-track{
     position:relative;
     height:3px;
-    margin-top:4px;
+    margin-top:5px;
     background: var(--line);
     border-radius: 3px;
     cursor:pointer;
@@ -264,10 +288,12 @@
     border-radius: 3px;
   }
 
+  /* buttons: prev / play / next / mute, with generous gap + padding so
+     mobile taps land on one button at a time, never two at once */
   .capsule-controls{
     display:flex;
     align-items:center;
-    gap: 6px;
+    gap: 4px;
     flex-shrink:0;
   }
 
@@ -277,17 +303,19 @@
     color: var(--cream);
     cursor:pointer;
     opacity:0.8;
-    padding:6px;
+    padding:12px;              /* bigger touch target */
     display:flex;
+    align-items:center;
+    justify-content:center;
     transition: opacity .15s ease, transform .15s ease;
   }
   .btn-icon:hover{ opacity:1; transform: scale(1.1); }
-  .btn-icon svg{ width:16px; height:16px; }
+  .btn-icon svg{ width:17px; height:17px; }
 
-  /* small pill-shaped play button, like a capsule tablet, inside the bigger capsule */
+  /* pill-shaped play button, like a capsule tablet, inside the bigger capsule */
   .btn-play{
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
     border-radius: 999px;
     background: var(--accent-red);
     border:none;
@@ -300,14 +328,16 @@
     transition: transform .15s ease;
   }
   .btn-play:hover{ transform: scale(1.08); }
-  .btn-play svg{ width:15px; height:15px; fill: var(--cream); }
+  .btn-play svg{ width:16px; height:16px; fill: var(--cream); }
 
-  /* small screens: tighten the capsule + title */
+  /* small screens: tighten spacing but keep touch targets comfortable */
   @media (max-width:480px){
-    .topbar{ padding: 14px 16px; font-size:11px; }
-    .capsule{ gap:10px; padding: 7px 14px 7px 7px; }
-    .capsule-art{ width:40px; height:40px; }
+    .topbar-row1{ padding: 14px 16px 10px; font-size:11px; }
+    .capsule-wrap{ bottom: 34px; padding: 0 12px; }
+    .capsule{ gap:10px; padding: 10px 14px 10px 10px; min-height:68px; }
+    .capsule-art{ width:46px; height:46px; }
     .capsule-title{ font-size:13px; }
+    .btn-icon{ padding:10px; }
   }
 </style>
 </head>
@@ -315,22 +345,28 @@
 
   <!-- ================= 5. HTML ================= -->
 
-  <!-- HEADER: fake "online" listener count + link out to the playlist -->
+  <!-- HEADER row 1: live clock (left) · online count (center) · playlist link (right) -->
   <header class="topbar">
-    <div class="online-count">
-      <span class="pulse-dot"></span>
-      <span id="onlineCount">128</span><span>&nbsp;online</span>
+    <div class="topbar-row1">
+      <span class="live-clock" id="liveClock">--:--:--</span>
+
+      <span class="online-count">
+        <span class="pulse-dot"></span>
+        <span id="onlineCount">128</span><span>&nbsp;online</span>
+      </span>
+
+      <a href="https://youtube.com/playlist?list=PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM" target="_blank" rel="noopener">
+        Full Playlist ↗
+      </a>
     </div>
-    <div class="rx-tag">medical store &middot; dawakhana radio</div>
-    <a href="https://youtube.com/playlist?list=PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM" target="_blank" rel="noopener">
-      Full Playlist ↗
-    </a>
+
+    <!-- HEADER row 2: tagline, sits below the dashed divider -->
+    <div class="topbar-row2">medical store &middot; dawakhana radio</div>
   </header>
 
-  <!-- CENTER: brand only — background photo stays the hero -->
+  <!-- CENTER: Hindi brand title, pinned higher on the page -->
   <main class="center">
-    <h1 class="brand">Medical Store</h1>
-    <p class="tagline">non-stop playlist &middot; no ads</p>
+    <h1 class="brand">मेडिकल स्टोर</h1>
     <div class="stamp">Rx &middot; now playing</div>
   </main>
 
@@ -360,6 +396,10 @@
 
         <button class="btn-icon" id="nextBtn" aria-label="Next song">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+        </button>
+
+        <button class="btn-icon" id="muteBtn" aria-label="Mute or unmute">
+          <svg id="muteIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
         </button>
       </div>
     </div>
@@ -441,6 +481,16 @@
       : '<path d="M8 5v14l11-7z"/>';                // play icon
   }
 
+  // swap the speaker icon between "sound on" and "muted" states
+  function setMuteIcon(muted) {
+    const icon = document.getElementById('muteIcon');
+    icon.innerHTML = muted
+      // muted speaker (speaker + slash)
+      ? '<path d="M16.5 12A4.5 4.5 0 0 0 14 8v1.5l2.24 2.24c.16-.55.26-1.13.26-1.74zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/>'
+      // normal speaker
+      : '<path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+  }
+
   function updateNowPlayingInfo() {
     if (!player || typeof player.getVideoData !== 'function') return;
     const data = player.getVideoData();
@@ -486,6 +536,18 @@
     if (player) player.previousVideo();
   });
 
+  // ---- mute/unmute button ----
+  document.getElementById('muteBtn').addEventListener('click', () => {
+    if (!player || typeof player.isMuted !== 'function') return;
+    if (player.isMuted()) {
+      player.unMute();
+      setMuteIcon(false);
+    } else {
+      player.mute();
+      setMuteIcon(true);
+    }
+  });
+
   // click-to-seek on the capsule's thin progress bar
   document.getElementById('progressTrack').addEventListener('click', (e) => {
     if (!player || typeof player.getDuration !== 'function') return;
@@ -494,6 +556,20 @@
     const duration = player.getDuration();
     player.seekTo(duration * ratio, true);
   });
+
+  // ---- live clock (top-left, updates every second) ----
+  (function liveClock() {
+    const el = document.getElementById('liveClock');
+    function tick() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      el.textContent = `${hh}:${mm}:${ss}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
 
   // ---- fake "online now" counter ----
   // Purely cosmetic (matches the reference site's vibe). Wander gently

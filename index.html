@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Medical Store</title>
+<meta name="description" content="Medical Store — non-stop music, no ads." />
+
+<!--
+  =====================================================================
+  MEDICAL STORE — background music jukebox
+  ---------------------------------------------------------------------
+  v2 changes from the first version:
+    - Background image is now fully visible (removed the solid dark-teal
+      wash; only a light top/bottom vignette remains, just enough to
+      keep text/capsule readable).
+    - Player moved out of the center card into a floating capsule
+      pinned to the bottom-center of the screen (like saloon.wtf):
+      thumbnail + song title/artist + prev/play/next, all in one pill.
+    - Center of the page now just has the brand title, tagline and the
+      "Rx" stamp — nothing else competing with the background photo.
+
+  FILE MAP (search for these markers to edit fast):
+    1. CONFIG        -> playlist id, brand name, background image
+    2. FONTS         -> Google Fonts import
+    3. CSS VARIABLES -> color / spacing tokens, edit palette here
+    4. CSS           -> layout + component styles
+    5. HTML          -> page markup
+    6. JS - CONFIG   -> same config values, used by the script
+    7. JS - YOUTUBE  -> loads YouTube IFrame API, plays the playlist
+    8. JS - UI LOGIC -> play/pause, next/prev, progress bar, online count
+  =====================================================================
+-->
+
+<!-- ============ 2. FONTS ============
+     Fraunces = warm serif for the big brand title (display face)
+     JetBrains Mono = "prescription label" utility face for small text -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+
+  /* ================= 3. CSS VARIABLES — EDIT PALETTE HERE ================= */
+  :root{
+    /* --- CONFIG: swap this to change the background photo --- */
+    --bg-image: url('https://raw.githubusercontent.com/nitesh230github/medical-store-playlist/main/images/background.png');
+
+    /* colors */
+    --ink-deep:    #06231F;   /* near-black teal, used only in small doses now */
+    --cream:       #F6F3E9;   /* prescription-pad paper color, main text */
+    --muted:       #CFE0DB;   /* secondary text / labels (brighter now, since
+                                  it sits directly on the photo, not a dark card) */
+    --accent-red:  #E14B3D;   /* "medical cross" red — play button, tag */
+    --accent-mint: #79E6C4;   /* pulse-line green — ECG, active states  */
+    --line:        rgba(246,243,233,0.22); /* hairline dividers */
+
+    /* capsule (bottom player pill) */
+    --capsule-bg:  rgba(6,35,31,0.55);     /* translucent so photo still shows through */
+    --capsule-blur: 14px;
+
+    /* type */
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{
+    height:100%;
+    font-family: var(--font-mono);
+    color: var(--cream);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body{
+    min-height:100dvh;
+    position:relative;
+    overflow-x:hidden;
+
+    /* ---- background photo, now nearly untouched ----
+       Only a soft vignette at the very top (for the header bar) and
+       very bottom (for the capsule) so text stays legible — the
+       middle of the photo is shown almost at full strength. */
+    background-image:
+      linear-gradient(180deg, rgba(6,35,31,0.40) 0%, rgba(6,35,31,0.05) 22%, rgba(6,35,31,0.05) 70%, rgba(6,35,31,0.55) 100%),
+      var(--bg-image);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+
+  /* ================= HEADER BAR ================= */
+  .topbar{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:5;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 18px 28px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  /* pulse/heartbeat dot next to the "online" count */
+  .pulse-dot{
+    display:inline-block;
+    width:8px; height:8px;
+    border-radius:50%;
+    background: var(--accent-mint);
+    box-shadow: 0 0 0 0 rgba(121,230,196,0.6);
+    animation: pulse 1.6s ease-out infinite;
+    margin-right:8px;
+  }
+  @keyframes pulse{
+    0%   { box-shadow: 0 0 0 0 rgba(121,230,196,0.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(121,230,196,0); }
+    100% { box-shadow: 0 0 0 0 rgba(121,230,196,0); }
+  }
+
+  .online-count{ display:flex; align-items:center; color: var(--muted); text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+  .online-count b{ color: var(--cream); font-weight:700; margin-left:4px; }
+
+  .rx-tag{ color: var(--muted); text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+
+  .topbar a{
+    color: var(--cream);
+    text-decoration:none;
+    border-bottom: 1px solid var(--accent-red);
+    padding-bottom: 2px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+  .topbar a:hover{ color: var(--accent-mint); border-color: var(--accent-mint); }
+
+  /* ================= CENTER CONTENT (brand only, page kept quiet) ================= */
+  .center{
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: 100px 24px 180px; /* bottom padding keeps title clear of the capsule */
+  }
+
+  .brand{
+    font-family: var(--font-display);
+    font-weight:600;
+    font-size: clamp(42px, 9vw, 64px);
+    letter-spacing: 0.01em;
+    line-height:1;
+    color: var(--cream);
+    text-shadow: 0 4px 24px rgba(0,0,0,0.55); /* keeps title readable over any photo */
+  }
+
+  .tagline{
+    margin-top:12px;
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color: var(--muted);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+  }
+
+  /* small "Rx" stamp badge under the tagline */
+  .stamp{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:22px;
+    padding: 5px 12px;
+    border: 1px solid var(--accent-red);
+    border-radius: 999px;
+    background: rgba(6,35,31,0.35);
+    color: var(--accent-red);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ================= 4b. BOTTOM CAPSULE PLAYER ================= */
+  .capsule-wrap{
+    position:fixed;
+    left:0; right:0;
+    bottom: 22px;
+    z-index:5;
+    display:flex;
+    justify-content:center;
+    padding: 0 16px;
+  }
+
+  .capsule{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    max-width: 480px;
+    width:100%;
+    padding: 8px 18px 8px 8px;
+    border-radius: 999px;
+    background: var(--capsule-bg);
+    backdrop-filter: blur(var(--capsule-blur));
+    -webkit-backdrop-filter: blur(var(--capsule-blur));
+    border: 1px solid var(--line);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+  }
+
+  .capsule-art{
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;         /* round thumbnail = capsule/tablet feel */
+    overflow:hidden;
+    flex-shrink:0;
+    background: var(--ink-deep);
+    border: 1px solid var(--line);
+  }
+  .capsule-art img{
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  .capsule-info{
+    flex:1;
+    min-width:0; /* required so text-overflow ellipsis works in a flex child */
+    display:flex;
+    flex-direction:column;
+    gap: 3px;
+  }
+  .capsule-title{
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight:500;
+    color: var(--cream);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .capsule-artist{
+    font-size: 10px;
+    color: var(--muted);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* thin ECG-style progress line under the title/artist text */
+  .capsule-progress-track{
+    position:relative;
+    height:3px;
+    margin-top:4px;
+    background: var(--line);
+    border-radius: 3px;
+    cursor:pointer;
+    overflow:hidden;
+  }
+  .capsule-progress-fill{
+    position:absolute;
+    top:0; left:0; bottom:0;
+    width:0%;                /* JS updates this */
+    background: var(--accent-mint);
+    border-radius: 3px;
+  }
+
+  .capsule-controls{
+    display:flex;
+    align-items:center;
+    gap: 6px;
+    flex-shrink:0;
+  }
+
+  .btn-icon{
+    background:none;
+    border:none;
+    color: var(--cream);
+    cursor:pointer;
+    opacity:0.8;
+    padding:6px;
+    display:flex;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .btn-icon:hover{ opacity:1; transform: scale(1.1); }
+  .btn-icon svg{ width:16px; height:16px; }
+
+  /* small pill-shaped play button, like a capsule tablet, inside the bigger capsule */
+  .btn-play{
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: var(--accent-red);
+    border:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    box-shadow: 0 6px 16px rgba(225,75,61,0.4);
+    transition: transform .15s ease;
+  }
+  .btn-play:hover{ transform: scale(1.08); }
+  .btn-play svg{ width:15px; height:15px; fill: var(--cream); }
+
+  /* small screens: tighten the capsule + title */
+  @media (max-width:480px){
+    .topbar{ padding: 14px 16px; font-size:11px; }
+    .capsule{ gap:10px; padding: 7px 14px 7px 7px; }
+    .capsule-art{ width:40px; height:40px; }
+    .capsule-title{ font-size:13px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ================= 5. HTML ================= -->
+
+  <!-- HEADER: fake "online" listener count + link out to the playlist -->
+  <header class="topbar">
+    <div class="online-count">
+      <span class="pulse-dot"></span>
+      <span id="onlineCount">128</span><span>&nbsp;online</span>
+    </div>
+    <div class="rx-tag">medical store &middot; dawakhana radio</div>
+    <a href="https://youtube.com/playlist?list=PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM" target="_blank" rel="noopener">
+      Full Playlist ↗
+    </a>
+  </header>
+
+  <!-- CENTER: brand only — background photo stays the hero -->
+  <main class="center">
+    <h1 class="brand">Medical Store</h1>
+    <p class="tagline">non-stop playlist &middot; no ads</p>
+    <div class="stamp">Rx &middot; now playing</div>
+  </main>
+
+  <!-- BOTTOM: floating capsule player (thumbnail, title/artist, controls) -->
+  <div class="capsule-wrap">
+    <div class="capsule">
+      <div class="capsule-art">
+        <img id="albumArt" src="" alt="Now playing artwork" />
+      </div>
+
+      <div class="capsule-info">
+        <span class="capsule-title" id="songTitle">Loading playlist…</span>
+        <span class="capsule-artist" id="songArtist">Medical Store Radio</span>
+        <div class="capsule-progress-track" id="progressTrack">
+          <div class="capsule-progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="capsule-controls">
+        <button class="btn-icon" id="prevBtn" aria-label="Previous song">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+
+        <button class="btn-play" id="playBtn" aria-label="Play or pause">
+          <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+
+        <button class="btn-icon" id="nextBtn" aria-label="Next song">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden YouTube player: only audio is used, no video chrome/ads shown -->
+  <div id="ytPlayer" style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0;"></div>
+
+<script>
+  /* ================= 6. JS - CONFIG =================
+     Change these two values to point the page at a different
+     playlist or brand name. Everything else adapts automatically. */
+  const CONFIG = {
+    PLAYLIST_ID: 'PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM', // your YouTube playlist
+    BRAND_NAME: 'Medical Store'
+  };
+
+  /* ================= 7. JS - YOUTUBE PLAYER SETUP ================= */
+
+  // Load the YouTube IFrame API script asynchronously.
+  const ytScript = document.createElement('script');
+  ytScript.src = 'https://www.youtube.com/iframe_api';
+  document.body.appendChild(ytScript);
+
+  let player;               // the YT.Player instance
+  let isPlaying = false;
+  let progressTimer = null; // interval used to update the progress bar
+
+  // Called automatically by the YouTube API once it has loaded.
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player('ytPlayer', {
+      height: '1',
+      width: '1',
+      playerVars: {
+        listType: 'playlist',
+        list: CONFIG.PLAYLIST_ID,
+        autoplay: 1,
+        controls: 0,     // hide YouTube's own UI, we use our own controls
+        disablekb: 1,
+        modestbranding: 1,
+        rel: 0
+      },
+      events: {
+        onReady: onPlayerReady,
+        onStateChange: onPlayerStateChange
+      }
+    });
+  };
+
+  function onPlayerReady() {
+    // Some browsers block autoplay with sound until the user interacts once.
+    player.playVideo();
+  }
+
+  function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+      isPlaying = true;
+      setPlayIcon(true);
+      updateNowPlayingInfo();
+      startProgressTimer();
+    } else if (event.data === YT.PlayerState.PAUSED) {
+      isPlaying = false;
+      setPlayIcon(false);
+      stopProgressTimer();
+    } else if (event.data === YT.PlayerState.ENDED) {
+      // playlist auto-advances on its own; this is just a safety net
+      stopProgressTimer();
+    } else if (event.data === YT.PlayerState.CUED) {
+      updateNowPlayingInfo();
+    }
+  }
+
+  /* ================= 8. JS - UI LOGIC ================= */
+
+  function setPlayIcon(playing) {
+    const icon = document.getElementById('playIcon');
+    icon.innerHTML = playing
+      ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'   // pause icon
+      : '<path d="M8 5v14l11-7z"/>';                // play icon
+  }
+
+  function updateNowPlayingInfo() {
+    if (!player || typeof player.getVideoData !== 'function') return;
+    const data = player.getVideoData();
+    if (!data) return;
+
+    document.getElementById('songTitle').textContent = data.title || 'Medical Store Radio';
+    document.getElementById('songArtist').textContent = data.author || CONFIG.BRAND_NAME;
+
+    if (data.video_id) {
+      // hqdefault thumbnail = reliable size that exists for every YouTube video
+      document.getElementById('albumArt').src =
+        `https://img.youtube.com/vi/${data.video_id}/hqdefault.jpg`;
+    }
+  }
+
+  function startProgressTimer() {
+    stopProgressTimer();
+    progressTimer = setInterval(() => {
+      if (!player || typeof player.getCurrentTime !== 'function') return;
+      const current = player.getCurrentTime();
+      const duration = player.getDuration();
+      const pct = duration ? (current / duration) * 100 : 0;
+      document.getElementById('progressFill').style.width = pct + '%';
+    }, 500);
+  }
+
+  function stopProgressTimer() {
+    if (progressTimer) clearInterval(progressTimer);
+    progressTimer = null;
+  }
+
+  // ---- transport button handlers ----
+  document.getElementById('playBtn').addEventListener('click', () => {
+    if (!player) return;
+    isPlaying ? player.pauseVideo() : player.playVideo();
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (player) player.nextVideo();
+  });
+
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    if (player) player.previousVideo();
+  });
+
+  // click-to-seek on the capsule's thin progress bar
+  document.getElementById('progressTrack').addEventListener('click', (e) => {
+    if (!player || typeof player.getDuration !== 'function') return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    const duration = player.getDuration();
+    player.seekTo(duration * ratio, true);
+  });
+
+  // ---- fake "online now" counter ----
+  // Purely cosmetic (matches the reference site's vibe). Wander gently
+  // around a base number every few seconds. Replace with a real
+  // websocket/analytics feed if you want a genuine live count.
+  (function fakeOnlineCounter() {
+    const el = document.getElementById('onlineCount');
+    let count = 128;
+    setInterval(() => {
+      count += Math.floor(Math.random() * 5) - 2; // drift by -2..+2
+      count = Math.max(40, Math.min(400, count));
+      el.textContent = count;
+    }, 4000);
+  })();
+</script>
+</body>
+</html>

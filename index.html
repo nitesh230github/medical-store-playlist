@@ -53,8 +53,9 @@
 
     /* colors */
     --ink-deep:    #06231F;   /* near-black teal, used only in small doses */
-    --cream:       #F6F3E9;   /* prescription-pad paper color, main text */
-    --muted:       #CFE0DB;   /* secondary text / labels */
+    --cream:       #FFFFFF;   /* pure white — used for ALL header/main text now */
+    --muted:       #FFFFFF;   /* was a dim teal-white; now same pure white so
+                                  time / online count / tagline read clearly */
     --accent-red:  #E14B3D;   /* "medical cross" red — play button, tag */
     --accent-mint: #79E6C4;   /* pulse-line green — ECG, active states  */
     --line:        rgba(246,243,233,0.22); /* hairline dividers */
@@ -106,8 +107,8 @@
     display:grid;
     grid-template-columns: 1fr auto 1fr;
     align-items:center;
-    padding: 16px 28px 12px;
-    font-size: 12px;
+    padding: 18px 28px 14px;
+    font-size: 16px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     border-bottom: 1px dashed var(--line);
@@ -158,11 +159,12 @@
   /* row 2: tagline, sits BELOW the dashed line */
   .topbar-row2{
     text-align:center;
-    padding: 8px 16px;
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight:600;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--cream);
     text-shadow: 0 1px 6px rgba(0,0,0,0.6);
   }
 
@@ -199,7 +201,7 @@
     border-radius: 999px;
     background: rgba(6,35,31,0.35);
     color: var(--accent-red);
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -255,15 +257,15 @@
   }
   .capsule-title{
     font-family: var(--font-display);
-    font-size: 14px;
-    font-weight:500;
+    font-size: 17px;
+    font-weight:600;
     color: var(--cream);
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
   .capsule-artist{
-    font-size: 10px;
+    font-size: 13px;
     color: var(--muted);
     white-space:nowrap;
     overflow:hidden;
@@ -332,11 +334,13 @@
 
   /* small screens: tighten spacing but keep touch targets comfortable */
   @media (max-width:480px){
-    .topbar-row1{ padding: 14px 16px 10px; font-size:11px; }
+    .topbar-row1{ padding: 14px 16px 10px; font-size:13px; }
+    .topbar-row2{ font-size:12px; }
     .capsule-wrap{ bottom: 34px; padding: 0 12px; }
     .capsule{ gap:10px; padding: 10px 14px 10px 10px; min-height:68px; }
     .capsule-art{ width:46px; height:46px; }
-    .capsule-title{ font-size:13px; }
+    .capsule-title{ font-size:15px; }
+    .capsule-artist{ font-size:12px; }
     .btn-icon{ padding:10px; }
   }
 </style>

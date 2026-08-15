@@ -10,32 +10,39 @@
   =====================================================================
   MEDICAL STORE — background music jukebox
   ---------------------------------------------------------------------
-  Inspired by saloon.wtf's layout (big title, album art, minimal
-  transport controls), reskinned around a "medical store / prescription
-  pad" idea instead of a barber shop:
-    - the progress bar looks like an ECG / pulse line
-    - the online counter has a small heartbeat dot
-    - the card has a torn "perforation" edge like a prescription slip
-    - an "Rx" stamp sits near the title
+  v3 changes from v2:
+    - Header restructured into two rows:
+        row 1 (above the dashed line) = live clock (left) · online
+              count (true center, via grid) · playlist link (right)
+        row 2 (below the dashed line) = "medical store · dawakhana
+              radio" tagline, centered
+    - Center brand title changed to Hindi "मेडिकल स्टोर" and moved
+      higher up the page.
+    - Bottom capsule player:
+        - taller + more internal spacing so prev/play/next/mute
+          buttons don't overlap each other on mobile taps
+        - added a mute/unmute (speaker) button
+        - moved further up from the bottom edge
 
-  HOW THIS FILE IS ORGANISED (search for these markers to edit fast):
-    1. CONFIG        -> change playlist id, brand name, background image
+  FILE MAP (search for these markers to edit fast):
+    1. CONFIG        -> playlist id, brand name, background image
     2. FONTS         -> Google Fonts import
     3. CSS VARIABLES -> color / spacing tokens, edit palette here
     4. CSS           -> layout + component styles
     5. HTML          -> page markup
     6. JS - CONFIG   -> same config values, used by the script
     7. JS - YOUTUBE  -> loads YouTube IFrame API, plays the playlist
-    8. JS - UI LOGIC -> play/pause, next/prev, progress bar, online count
+    8. JS - UI LOGIC -> play/pause, mute, next/prev, progress, clock
   =====================================================================
 -->
 
 <!-- ============ 2. FONTS ============
      Fraunces = warm serif for the big brand title (display face)
+     Noto Serif Devanagari = matching serif for the Hindi title
      JetBrains Mono = "prescription label" utility face for small text -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Noto+Serif+Devanagari:wght@500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
 <style>
 
@@ -45,16 +52,21 @@
     --bg-image: url('images/background.webp');
 
     /* colors */
-    --ink-deep:    #06231F;   /* near-black teal, base overlay color   */
-    --ink-mid:     #0F3B35;   /* mid teal, used in gradient overlay    */
-    --cream:       #F6F3E9;   /* prescription-pad paper color, main text */
-    --muted:       #A9C2BC;   /* secondary text / labels                */
+    --ink-deep:    #06231F;   /* near-black teal, used only in small doses */
+    --cream:       #FFFFFF;   /* pure white — used for ALL header/main text now */
+    --muted:       #FFFFFF;   /* was a dim teal-white; now same pure white so
+                                  time / online count / tagline read clearly */
     --accent-red:  #E14B3D;   /* "medical cross" red — play button, tag */
     --accent-mint: #79E6C4;   /* pulse-line green — ECG, active states  */
-    --line:        rgba(246,243,233,0.18); /* hairline dividers */
+    --line:        rgba(246,243,233,0.22); /* hairline dividers */
+
+    /* capsule (bottom player pill) */
+    --capsule-bg:  rgba(6,35,31,0.55);     /* translucent so photo still shows through */
+    --capsule-blur: 14px;
 
     /* type */
     --font-display: 'Fraunces', Georgia, serif;
+    --font-hindi: 'Noto Serif Devanagari', 'Fraunces', serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
@@ -69,15 +81,12 @@
 
   body{
     min-height:100dvh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding: 24px;
+    position:relative;
     overflow-x:hidden;
 
-    /* ---- background photo + dark clinical-teal wash so text stays readable ---- */
+    /* background photo, only a soft vignette top/bottom for legibility */
     background-image:
-      linear-gradient(180deg, rgba(6,35,31,0.88) 0%, rgba(6,35,31,0.75) 45%, rgba(6,35,31,0.92) 100%),
+      linear-gradient(180deg, rgba(6,35,31,0.40) 0%, rgba(6,35,31,0.05) 22%, rgba(6,35,31,0.05) 70%, rgba(6,35,31,0.55) 100%),
       var(--bg-image);
     background-size: cover;
     background-position: center;
@@ -88,17 +97,37 @@
   .topbar{
     position:fixed;
     top:0; left:0; right:0;
-    display:flex;
+    z-index:5;
+  }
+
+  /* row 1: clock | online count (true center) | playlist link
+     3-column grid so the center item stays centered regardless of
+     how wide the left/right items are */
+  .topbar-row1{
+    display:grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items:center;
-    justify-content:space-between;
-    padding: 18px 28px;
-    font-size: 12px;
+    padding: 18px 28px 14px;
+    font-size: 16px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    border-bottom: 1px dashed var(--line);
-    background: linear-gradient(180deg, rgba(6,35,31,0.55), transparent);
-    backdrop-filter: blur(2px);
   }
+
+  .live-clock{
+    justify-self:start;
+    color: var(--muted);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    font-variant-numeric: tabular-nums; /* keeps digits from jittering in width */
+  }
+
+  .online-count{
+    justify-self:center;
+    display:flex;
+    align-items:center;
+    color: var(--muted);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+  .online-count b{ color: var(--cream); font-weight:700; margin-left:4px; }
 
   /* pulse/heartbeat dot next to the "online" count */
   .pulse-dot{
@@ -116,209 +145,222 @@
     100% { box-shadow: 0 0 0 0 rgba(121,230,196,0); }
   }
 
-  .online-count{ display:flex; align-items:center; color: var(--muted); }
-  .online-count b{ color: var(--cream); font-weight:700; margin-left:4px; }
-
-  .rx-tag{
-    color: var(--muted);
-  }
-
-  .topbar a{
-    color: var(--cream);
-    text-decoration:none;
-    border-bottom: 1px solid var(--accent-red);
-    padding-bottom: 2px;
-  }
-  .topbar a:hover{ color: var(--accent-mint); border-color: var(--accent-mint); }
-
-  /* ================= MAIN CARD (prescription slip) ================= */
-  .card{
-    width:100%;
-    max-width: 460px;
-    text-align:center;
-    padding: 40px 30px 34px;
-    position:relative;
-  }
-
-  /* torn / perforated top edge, like tearing a prescription pad page */
-  .perforation{
+  .topbar-row1 .yt-link{
+    justify-self:end;
     display:flex;
-    justify-content:center;
-    gap:6px;
-    margin-bottom: 28px;
-    opacity:0.5;
+    align-items:center;
+    color: var(--cream);
+    opacity:0.9;
+    transition: opacity .15s ease, transform .15s ease;
+    filter: drop-shadow(0 1px 6px rgba(0,0,0,0.6));
   }
-  .perforation span{
-    width:4px; height:4px;
-    border-radius:50%;
-    background: var(--muted);
+  .topbar-row1 .yt-link:hover{ opacity:1; transform: scale(1.08); color: var(--accent-mint); }
+
+  /* row 2: tagline, sits BELOW the dashed line */
+  .topbar-row2{
+    text-align:center;
+    padding: 6px 16px 14px;
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-weight:700;
+    font-size: 20px;
+    letter-spacing: 0.28em;          /* wide tracking = prescription-label feel */
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-decoration-style: dashed;   /* dashed instead of solid = matches the
+                                         perforation / ECG motif elsewhere */
+    text-decoration-color: var(--accent-mint);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+    color: var(--cream);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+
+  /* ================= CENTER CONTENT (brand only, page kept quiet) ================= */
+  .center{
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;  /* pinned toward the top instead of true center */
+    text-align:center;
+    padding: 170px 24px 220px; /* top padding now clears the fixed 2-row header
+                                   (clock/online/icon row + tagline row) with room
+                                   to spare, so the title never overlaps it;
+                                   bottom padding keeps it clear of the capsule */
   }
 
   .brand{
-    font-family: var(--font-display);
+    font-family: var(--font-hindi);
     font-weight:600;
-    font-size: clamp(38px, 8vw, 58px);
+    font-size: clamp(112px, 24vw, 176px);
     letter-spacing: 0.01em;
-    line-height:1;
+    line-height:1.05;
     color: var(--cream);
+    text-shadow: 0 4px 24px rgba(0,0,0,0.55); /* keeps title readable over any photo */
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: 0.25em;
+    flex-wrap:wrap;
   }
 
-  .tagline{
-    margin-top:10px;
-    font-size:12px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    color: var(--muted);
-  }
-
-  /* small "Rx" stamp badge under the tagline */
+  /* small "Rx" stamp badge under the title */
   .stamp{
     display:inline-flex;
     align-items:center;
     gap:6px;
-    margin-top:18px;
-    padding: 4px 10px;
+    padding: 7px 16px;
     border: 1px solid var(--accent-red);
     border-radius: 999px;
-    color: var(--accent-red);
-    font-size: 11px;
+    background: rgba(225,75,61,0.55);   /* light dull-red fill so the box itself
+                                            stands out against the red-toned photo */
+    color: var(--cream);                /* white text, now clearly readable */
+    font-size: 14px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
-  /* ================= ALBUM ART ================= */
-  .art-wrap{
-    margin: 30px auto 22px;
-    width: 220px;
-    height: 220px;
-    border-radius: 24px;                 /* soft "capsule" corner, not a sharp square */
-    overflow:hidden;
-    border: 1px solid var(--line);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-    background: var(--ink-mid);
+  /* ================= 4b. BOTTOM CAPSULE PLAYER ================= */
+  .capsule-wrap{
+    position:fixed;
+    left:0; right:0;
+    bottom: 46px;                 /* moved further up from the bottom edge */
+    z-index:5;
+    display:flex;
+    flex-direction:column;        /* stamp stacks above the capsule */
+    align-items:center;
+    gap: 12px;                    /* the "gap" between stamp and capsule */
+    padding: 0 16px;
   }
-  .art-wrap img{
+
+  .capsule{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    max-width: 520px;
+    width:100%;
+    min-height: 76px;             /* taller capsule = more room between buttons */
+    padding: 12px 20px 12px 12px;
+    border-radius: 999px;
+    background: var(--capsule-bg);
+    backdrop-filter: blur(var(--capsule-blur));
+    -webkit-backdrop-filter: blur(var(--capsule-blur));
+    border: 1px solid var(--line);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+  }
+
+  .capsule-art{
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;         /* round thumbnail = capsule/tablet feel */
+    overflow:hidden;
+    flex-shrink:0;
+    background: var(--ink-deep);
+    border: 1px solid var(--line);
+  }
+  .capsule-art img{
     width:100%; height:100%;
     object-fit:cover;
     display:block;
   }
 
-  .song-title{
+  .capsule-info{
+    flex:1;
+    min-width:0; /* required so text-overflow ellipsis works in a flex child */
+    display:flex;
+    flex-direction:column;
+    gap: 4px;
+  }
+  .capsule-title{
     font-family: var(--font-display);
-    font-size: 20px;
-    font-weight:500;
+    font-size: 17px;
+    font-weight:600;
     color: var(--cream);
-    max-width: 380px;
-    margin: 0 auto;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  .song-artist{
-    margin-top:6px;
-    font-size:12px;
+  .capsule-artist{
+    font-size: 13px;
     color: var(--muted);
-    letter-spacing:0.04em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 
-  /* ================= PROGRESS / ECG LINE ================= */
-  .progress-row{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin: 26px 0 8px;
-    font-size:11px;
-    color: var(--muted);
-  }
-  .progress-track{
-    flex:1;
+  /* thin ECG-style progress line under the title/artist text */
+  .capsule-progress-track{
     position:relative;
-    height:16px;
-    cursor:pointer;
-  }
-  /* the base flat line of the "ECG" */
-  .progress-track::before{
-    content:"";
-    position:absolute;
-    top:50%; left:0; right:0;
-    height:1px;
+    height:3px;
+    margin-top:5px;
     background: var(--line);
-    transform: translateY(-50%);
-  }
-  .progress-fill{
-    position:absolute;
-    top:0; left:0; bottom:0;
-    width:0%;                      /* JS updates this */
+    border-radius: 3px;
+    cursor:pointer;
     overflow:hidden;
   }
-  .progress-fill::after{
-    /* animated mint line standing in for the "played" ECG segment */
-    content:"";
+  .capsule-progress-fill{
     position:absolute;
-    top:50%; left:0; right:0;
-    height:2px;
+    top:0; left:0; bottom:0;
+    width:0%;                /* JS updates this */
     background: var(--accent-mint);
-    transform: translateY(-50%);
-  }
-  .progress-dot{
-    position:absolute;
-    top:50%; left:0%;
-    width:9px; height:9px;
-    border-radius:50%;
-    background: var(--accent-mint);
-    transform: translate(-50%,-50%);
-    box-shadow: 0 0 8px rgba(121,230,196,0.8);
+    border-radius: 3px;
   }
 
-  /* ================= TRANSPORT CONTROLS ================= */
-  .controls{
+  /* buttons: prev / play / next / mute, with generous gap + padding so
+     mobile taps land on one button at a time, never two at once */
+  .capsule-controls{
     display:flex;
     align-items:center;
-    justify-content:center;
-    gap: 22px;
-    margin-top: 18px;
+    gap: 4px;
+    flex-shrink:0;
   }
+
   .btn-icon{
     background:none;
     border:none;
     color: var(--cream);
     cursor:pointer;
-    opacity:0.75;
-    padding:8px;
+    opacity:0.8;
+    padding:12px;              /* bigger touch target */
+    display:flex;
+    align-items:center;
+    justify-content:center;
     transition: opacity .15s ease, transform .15s ease;
   }
-  .btn-icon:hover{ opacity:1; transform: scale(1.08); }
-  .btn-icon svg{ width:20px; height:20px; }
+  .btn-icon:hover{ opacity:1; transform: scale(1.1); }
+  .btn-icon svg{ width:17px; height:17px; }
 
-  /* pill-shaped play button, like a capsule tablet */
+  /* pill-shaped play button, like a capsule tablet, inside the bigger capsule */
   .btn-play{
-    width: 64px;
+    width: 40px;
     height: 40px;
     border-radius: 999px;
-    background: var(--accent-red);
+    background: var(--cream);         /* white pill instead of red */
     border:none;
     display:flex;
     align-items:center;
     justify-content:center;
     cursor:pointer;
-    box-shadow: 0 10px 24px rgba(225,75,61,0.35);
-    transition: transform .15s ease, box-shadow .15s ease;
+    flex-shrink:0;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    transition: transform .15s ease;
   }
-  .btn-play:hover{ transform: scale(1.05); }
-  .btn-play svg{ width:18px; height:18px; fill: var(--cream); }
+  .btn-play:hover{ transform: scale(1.08); }
+  .btn-play svg{ width:16px; height:16px; fill: var(--accent-red); } /* red icon so it's visible on white */
 
-  .status-line{
-    margin-top: 22px;
-    font-size:10px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    color: var(--muted);
-  }
-
-  /* small screens */
+  /* small screens: tighten spacing but keep touch targets comfortable */
   @media (max-width:480px){
-    .topbar{ padding: 14px 16px; font-size:11px; }
-    .art-wrap{ width:180px; height:180px; }
+    .topbar-row1{ padding: 14px 16px 10px; font-size:13px; }
+    .topbar-row2{ font-size:12px; }
+    .capsule-wrap{ bottom: 34px; padding: 0 12px; }
+    .capsule{ gap:10px; padding: 10px 14px 10px 10px; min-height:68px; }
+    .capsule-art{ width:46px; height:46px; }
+    .capsule-title{ font-size:15px; }
+    .capsule-artist{ font-size:12px; }
+    .btn-icon{ padding:10px; }
+    .brand{ font-size: clamp(70px, 21vw, 120px); }
+    .center{ padding: 150px 18px 200px; }
   }
 </style>
 </head>
@@ -326,63 +368,72 @@
 
   <!-- ================= 5. HTML ================= -->
 
-  <!-- HEADER: fake "online" listener count + link out to the playlist -->
+  <!-- HEADER row 1: live clock (left) · online count (center) · playlist link (right) -->
   <header class="topbar">
-    <div class="online-count">
-      <span class="pulse-dot"></span>
-      <span id="onlineCount">128</span><span>&nbsp;online</span>
+    <div class="topbar-row1">
+      <span class="live-clock" id="liveClock">--:--:--</span>
+
+      <span class="online-count">
+        <span class="pulse-dot"></span>
+        <span id="onlineCount">128</span><span>&nbsp;online</span>
+      </span>
+
+      <a href="https://youtube.com/playlist?list=PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM" target="_blank" rel="noopener" class="yt-link" aria-label="Open full playlist on YouTube Music">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="6.3" fill="#06231F"/>
+          <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
+          <path d="M10.5 9.2v5.6l4.8-2.8z" fill="#06231F"/>
+        </svg>
+      </a>
     </div>
-    <div class="rx-tag">medical store &middot; dawakhana radio</div>
-    <a href="https://youtube.com/playlist?list=PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM" target="_blank" rel="noopener">
-      Full Playlist ↗
-    </a>
+
+    <!-- HEADER row 2: tagline, sits below the dashed divider -->
+    <div class="topbar-row2">Dawakhana Radio &middot; 24x7</div>
   </header>
 
-  <main class="card">
+  <!-- CENTER: Hindi brand title, pinned higher on the page -->
+  <main class="center">
+    <h1 class="brand">मेडिकल स्टोर</h1>
+  </main>
 
-    <div class="perforation">
-      <span></span><span></span><span></span><span></span><span></span><span></span>
-      <span></span><span></span><span></span><span></span><span></span><span></span>
-    </div>
-
-    <h1 class="brand">Medical Store</h1>
-    <p class="tagline">non-stop playlist &middot; no ads</p>
-
+  <!-- BOTTOM: "Rx · now playing" stamp sits above the capsule with a gap,
+       then the floating capsule player (thumbnail, title/artist, controls) -->
+  <div class="capsule-wrap">
     <div class="stamp">Rx &middot; now playing</div>
 
-    <div class="art-wrap">
-      <img id="albumArt" src="" alt="Now playing artwork" />
-    </div>
-
-    <p class="song-title" id="songTitle">Loading playlist…</p>
-    <p class="song-artist" id="songArtist">Medical Store Radio</p>
-
-    <div class="progress-row">
-      <span id="timeCurrent">0:00</span>
-      <div class="progress-track" id="progressTrack">
-        <div class="progress-fill" id="progressFill"></div>
-        <div class="progress-dot" id="progressDot"></div>
+    <div class="capsule">
+      <div class="capsule-art">
+        <img id="albumArt" src="" alt="Now playing artwork" />
       </div>
-      <span id="timeTotal">0:00</span>
+
+      <div class="capsule-info">
+        <span class="capsule-title" id="songTitle">Loading playlist…</span>
+        <span class="capsule-artist" id="songArtist">Medical Store Radio</span>
+        <div class="capsule-progress-track" id="progressTrack">
+          <div class="capsule-progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="capsule-controls">
+        <button class="btn-icon" id="prevBtn" aria-label="Previous song">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+
+        <button class="btn-play" id="playBtn" aria-label="Play or pause">
+          <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+
+        <button class="btn-icon" id="nextBtn" aria-label="Next song">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+        </button>
+
+        <button class="btn-icon" id="muteBtn" aria-label="Mute or unmute">
+          <svg id="muteIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+      </div>
     </div>
-
-    <div class="controls">
-      <button class="btn-icon" id="prevBtn" aria-label="Previous song">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-      </button>
-
-      <button class="btn-play" id="playBtn" aria-label="Play or pause">
-        <!-- icon is swapped between play/pause by JS -->
-        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-
-      <button class="btn-icon" id="nextBtn" aria-label="Next song">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
-      </button>
-    </div>
-
-    <p class="status-line" id="statusLine">connecting…</p>
-  </main>
+  </div>
 
   <!-- Hidden YouTube player: only audio is used, no video chrome/ads shown -->
   <div id="ytPlayer" style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0;"></div>
@@ -429,7 +480,6 @@
   };
 
   function onPlayerReady() {
-    document.getElementById('statusLine').textContent = 'tap play if audio does not start';
     // Some browsers block autoplay with sound until the user interacts once.
     player.playVideo();
   }
@@ -440,7 +490,6 @@
       setPlayIcon(true);
       updateNowPlayingInfo();
       startProgressTimer();
-      document.getElementById('statusLine').textContent = 'now playing';
     } else if (event.data === YT.PlayerState.PAUSED) {
       isPlaying = false;
       setPlayIcon(false);
@@ -462,6 +511,16 @@
       : '<path d="M8 5v14l11-7z"/>';                // play icon
   }
 
+  // swap the speaker icon between "sound on" and "muted" states
+  function setMuteIcon(muted) {
+    const icon = document.getElementById('muteIcon');
+    icon.innerHTML = muted
+      // muted speaker (speaker + slash)
+      ? '<path d="M16.5 12A4.5 4.5 0 0 0 14 8v1.5l2.24 2.24c.16-.55.26-1.13.26-1.74zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/>'
+      // normal speaker
+      : '<path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+  }
+
   function updateNowPlayingInfo() {
     if (!player || typeof player.getVideoData !== 'function') return;
     const data = player.getVideoData();
@@ -477,13 +536,6 @@
     }
   }
 
-  function formatTime(seconds) {
-    if (!isFinite(seconds) || seconds < 0) seconds = 0;
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  }
-
   function startProgressTimer() {
     stopProgressTimer();
     progressTimer = setInterval(() => {
@@ -491,11 +543,7 @@
       const current = player.getCurrentTime();
       const duration = player.getDuration();
       const pct = duration ? (current / duration) * 100 : 0;
-
       document.getElementById('progressFill').style.width = pct + '%';
-      document.getElementById('progressDot').style.left = pct + '%';
-      document.getElementById('timeCurrent').textContent = formatTime(current);
-      document.getElementById('timeTotal').textContent = formatTime(duration);
     }, 500);
   }
 
@@ -518,7 +566,19 @@
     if (player) player.previousVideo();
   });
 
-  // click-to-seek on the progress bar
+  // ---- mute/unmute button ----
+  document.getElementById('muteBtn').addEventListener('click', () => {
+    if (!player || typeof player.isMuted !== 'function') return;
+    if (player.isMuted()) {
+      player.unMute();
+      setMuteIcon(false);
+    } else {
+      player.mute();
+      setMuteIcon(true);
+    }
+  });
+
+  // click-to-seek on the capsule's thin progress bar
   document.getElementById('progressTrack').addEventListener('click', (e) => {
     if (!player || typeof player.getDuration !== 'function') return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -526,6 +586,22 @@
     const duration = player.getDuration();
     player.seekTo(duration * ratio, true);
   });
+
+  // ---- live clock (top-left, updates every second) ----
+  (function liveClock() {
+    const el = document.getElementById('liveClock');
+    function tick() {
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      if (hours === 0) hours = 12; // 0 -> 12 for 12-hour display
+      el.textContent = `${hours}:${minutes} ${ampm}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
 
   // ---- fake "online now" counter ----
   // Purely cosmetic (matches the reference site's vibe). Wander gently

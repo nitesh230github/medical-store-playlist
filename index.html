@@ -151,12 +151,22 @@
     justify-self:end;
     display:flex;
     align-items:center;
+    gap:8px;
+    padding: 6px 4px;             /* bigger touch target overall */
     color: var(--cream);
-    opacity:0.9;
+    text-decoration:none;
+    opacity:0.95;
     transition: opacity .15s ease, transform .15s ease;
     filter: drop-shadow(0 1px 6px rgba(0,0,0,0.6));
   }
-  .topbar-row1 .yt-link:hover{ opacity:1; transform: scale(1.08); color: var(--accent-mint); }
+  .topbar-row1 .yt-link:hover{ opacity:1; transform: scale(1.06); }
+  .yt-link-label{
+    font-family: var(--font-mono);
+    font-weight:700;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    color: var(--accent-red);       /* red label, easy to spot */
+  }
 
   /* row 2: tagline, sits BELOW the dashed line */
   .topbar-row2{
@@ -406,6 +416,7 @@
   /* small screens: tighten spacing but keep touch targets comfortable */
   @media (max-width:480px){
     .topbar-row1{ padding: 14px 16px 10px; font-size:13px; }
+    .yt-link-label{ font-size:12px; }
     .topbar-row2{ font-size:12px; }
     .capsule-wrap{ bottom: 34px; padding: 0 12px; }
     .capsule{ gap:10px; padding: 10px 14px 10px 10px; min-height:68px; }
@@ -432,14 +443,22 @@
         <span id="onlineCount">128</span><span>&nbsp;online</span>
       </span>
 
+      <!-- YT MUSIC BUTTON — temporarily hidden, kept here commented out
+           so it can be turned back on later by just removing this
+           comment wrapper.
       <a href="#" target="_blank" rel="noopener" class="yt-link" id="ytLink" aria-label="Open full playlist on YouTube Music">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-          <circle cx="12" cy="12" r="10"/>
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none">
+          <circle cx="12" cy="12" r="10" fill="var(--accent-red)"/>
           <circle cx="12" cy="12" r="6.3" fill="#06231F"/>
-          <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
-          <path d="M10.5 9.2v5.6l4.8-2.8z" fill="#06231F"/>
+          <path d="M10.3 9v6l5.2-3z" fill="var(--accent-red)"/>
         </svg>
+        <span class="yt-link-label">YT&nbsp;Music</span>
       </a>
+      -->
+      <span></span> <!-- empty placeholder so the row1 3-column grid still
+                          centers the online count correctly with nothing
+                          on the right side -->
+
     </div>
 
     <!-- HEADER row 2: tagline, sits below the dashed divider -->
@@ -525,25 +544,27 @@
         label: 'Bollywood',
         background: 'images/bollywood.png',
         playlists: [
-          { label: "Late 90's Hits", id: 'REPLACE_WITH_90S_PLAYLIST_ID' },
-          { label: 'Old Songs',      id: 'REPLACE_WITH_OLD_SONGS_PLAYLIST_ID' },
-          { label: 'Mix Songs',      id: 'REPLACE_WITH_MIX_PLAYLIST_ID' }
+          { label: "90's Hits",           id: 'PLMRKdK25AuPVjHl9Kdb-gkBy0Cm7Zi2xo' },
+          { label: "20's Hits",           id: 'PL71gzSkiT0QkByFoGuRrMfeWQhywnyGDO' },
+          { label: "Old (70's & 80's)",   id: 'PLEr9IYC4OqwElx92aeffYkJRbIWN7ocYc' },
+          { label: 'Emraan Hashmi Songs', id: 'PLypd8gqw_otEo8OeMSOEAkUm5WhuX_qcI' }
         ]
       },
       bhajan: {
         label: 'Bhajan',
         background: 'images/bhajan.png',
         playlists: [
-          { label: 'Aarti',    id: 'REPLACE_WITH_AARTI_PLAYLIST_ID' },
-          { label: 'Bhajan',   id: 'REPLACE_WITH_BHAJAN_PLAYLIST_ID' },
-          { label: 'Chalisa',  id: 'REPLACE_WITH_CHALISA_PLAYLIST_ID' }
+          { label: "Aarti's",   id: 'PLn8iYdRmM3lpFUyO235CqLTXOuNnyO5pX' },
+          { label: "Bhajan's",  id: 'PL9bw4S5ePsEE0jGfUgUMvzeWAaMPcqHL9' },
+          { label: 'Lofi Bhajan', id: 'PLuH-I1ovyzeioJ_j4DcQgoxtAbgBc3YD2' }
         ]
       },
       lofi: {
         label: 'Lofi',
         background: 'images/lofi.png',
         playlists: [
-          { label: 'Lofi Songs', id: 'PLeatb7hupNV_AWUl_7ttbsKeCQh8tF5N4' }
+          { label: 'All Mix',   id: 'PLgxs93BSP-hrI_pMZT28kVmGcvfFq234b' },
+          { label: "KK's Best", id: 'PLwceFViR-lwJgOoeIoyvviXOQFR625Ff9' }
         ]
       }
     }
@@ -647,7 +668,11 @@
   }
 
   // Point the header's YT Music icon at whatever is currently playing.
+  // NOTE: the button itself is currently commented out in the HTML (see
+  // the <!-- YT MUSIC BUTTON --> block above), so ytLinkEl will be null
+  // until it's restored — this guard just keeps that safe either way.
   function updateHeaderLink(playlistId) {
+    if (!ytLinkEl) return;
     ytLinkEl.href = `https://music.youtube.com/playlist?list=${playlistId}`;
   }
 

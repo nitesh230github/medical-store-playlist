@@ -522,8 +522,14 @@
     </div>
   </div>
 
-  <!-- Hidden YouTube player: only audio is used, no video chrome/ads shown -->
-  <div id="ytPlayer" style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0;"></div>
+  <!-- Hidden YouTube player: only audio is used, no video chrome/ads shown.
+       ytPlayerWrap stays in the DOM permanently; the inner #ytPlayer div
+       gets rebuilt each time we switch playlists (see createPlayer() in
+       the script) because YT's player.destroy() removes its target
+       element entirely, so we need a fresh one to build the next player on. -->
+  <div id="ytPlayerWrap" style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0;">
+    <div id="ytPlayer"></div>
+  </div>
 
 <script>
   /* ================= 6. JS - CONFIG =================
@@ -598,28 +604,46 @@
   let isPlaying = false;
   let progressTimer = null; // interval used to update the progress bar
 
-  // Called automatically by the YouTube API once it has loaded.
-  window.onYouTubeIframeAPIReady = function () {
+  // Builds (or rebuilds) the YouTube player for a given playlist ID.
+  // We fully destroy() the old player and create a brand new one instead
+  // of using player.loadPlaylist() on the existing player — loadPlaylist()
+  // turned out to be unreliable across playlist switches (stale internal
+  // state, occasional wrong-track playback). Destroy + recreate guarantees
+  // a completely clean player every time, at the cost of a ~1 second gap
+  // (covered by the "Loading playlist…" text in the capsule).
+  function createPlayer(playlistId) {
+    if (player && typeof player.destroy === 'function') {
+      player.destroy(); // this also removes the #ytPlayer element itself
+    }
+
+    // destroy() removes its target element, so rebuild a fresh one
+    // inside the permanent wrapper before creating the next player.
+    const wrap = document.getElementById('ytPlayerWrap');
+    wrap.innerHTML = '<div id="ytPlayer"></div>';
+
     player = new YT.Player('ytPlayer', {
       height: '1',
       width: '1',
       playerVars: {
         listType: 'playlist',
-        list: currentPlaylistId,
+        list: playlistId,
         autoplay: 1,
         controls: 0,     // hide YouTube's own UI, we use our own controls
         disablekb: 1,
         modestbranding: 1,
         rel: 0,
-        origin: window.location.origin   // fixes the common "postMessage
-                                          // target origin" console warning
-                                          // and makes API calls more reliable
+        origin: window.location.origin
       },
       events: {
         onReady: onPlayerReady,
         onStateChange: onPlayerStateChange
       }
     });
+  }
+
+  // Called automatically by the YouTube API once it has loaded.
+  window.onYouTubeIframeAPIReady = function () {
+    createPlayer(currentPlaylistId);
   };
 
   function onPlayerReady() {
@@ -697,27 +721,32 @@
     ytLinkEl.href = `https://music.youtube.com/playlist?list=${playlistId}`;
   }
 
-  // Tell the (already-created) YouTube player to load a different playlist,
-  // without reloading the whole page.
+  // Switch to a different playlist by fully rebuilding the player
+  // (see createPlayer() above for why — it's far more reliable than
+  // calling loadPlaylist() on the existing player instance).
   function switchPlaylist(playlistId) {
     switchToken++;               // any late event from an OLDER switch is now stale
     currentPlaylistId = playlistId;
     updateHeaderLink(playlistId);
 
-    // Reset the capsule text while the new playlist's first track loads.
+    // Reset the capsule text/art while the new playlist's first track loads.
     document.getElementById('songTitle').textContent = 'Loading playlist…';
     document.getElementById('songArtist').textContent = CONFIG.BRAND_NAME;
+    document.getElementById('albumArt').src = '';
+    document.getElementById('progressFill').style.width = '0%';
+    stopProgressTimer();
 
     // Disable both dropdowns until the new playlist actually starts
-    // playing — this is what stops the bug where quickly picking
-    // another sub-category mid-switch could end up playing the wrong
-    // (previous) playlist: only one switch can be "in flight" at a time.
+    // playing — stops a second click from racing an in-progress switch.
     categorySelectEl.disabled = true;
     playlistSelectEl.disabled = true;
 
-    if (player && typeof player.loadPlaylist === 'function') {
-      player.loadPlaylist({ list: playlistId, listType: 'playlist', index: 0 });
+    if (typeof YT !== 'undefined' && YT.Player) {
+      createPlayer(playlistId);
     }
+    // If the YouTube API script itself hasn't finished loading yet,
+    // currentPlaylistId is already updated, so onYouTubeIframeAPIReady's
+    // createPlayer(currentPlaylistId) call will use the right playlist.
 
     // Safety net: if PLAYING never fires (slow network, buffering issue,
     // etc.) the dropdowns would otherwise stay disabled forever — force
@@ -729,10 +758,6 @@
         playlistSelectEl.disabled = false;
       }
     }, 6000);
-    // If the player isn't ready yet, currentPlaylistId is already updated,
-    // so onPlayerReady's initial load will use the right playlist — and
-    // the dropdowns get re-enabled once onPlayerStateChange first fires
-    // PLAYING (see below).
   }
 
   // ---- CATEGORY change: swap background, rebuild playlist list, play its first playlist ----

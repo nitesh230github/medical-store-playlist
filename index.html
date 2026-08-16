@@ -48,7 +48,9 @@
 
   /* ================= 3. CSS VARIABLES — EDIT PALETTE HERE ================= */
   :root{
-    /* --- CONFIG: swap this to change the background photo --- */
+    /* --- CONFIG: swap this to change the background photo ---
+       Using a relative path means the image must live in your repo
+       at this exact path: images/back.png */
     --bg-image: url('images/back.png');
 
     /* colors */
@@ -206,19 +208,56 @@
   }
 
   /* small "Rx" stamp badge under the title */
-  .stamp{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    padding: 7px 16px;
-    border: 1px solid var(--accent-red);
+  /* ================= CATEGORY + PLAYLIST DROPDOWNS ================= */
+  .theme-switcher{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap: 14px;
+    margin-top: 34px;
+  }
+
+  /* native <select>, custom-styled to match the glass/capsule look.
+     appearance:none removes the default OS arrow so we can draw our own. */
+  .theme-select{
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-width: 190px;
+    padding: 14px 40px 14px 20px;
     border-radius: 999px;
-    background: rgba(225,75,61,0.55);   /* light dull-red fill so the box itself
-                                            stands out against the red-toned photo */
-    color: var(--cream);                /* white text, now clearly readable */
-    font-size: 14px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    border: 1px solid var(--line);
+    background-color: var(--capsule-bg);
+    backdrop-filter: blur(var(--capsule-blur));
+    -webkit-backdrop-filter: blur(var(--capsule-blur));
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight:600;
+    letter-spacing: 0.04em;
+    cursor:pointer;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.4);
+
+    /* custom dropdown arrow drawn with a small inline SVG */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' stroke='%2379E6C4' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+  }
+  .theme-select:hover,
+  .theme-select:focus{
+    border-color: var(--accent-mint);
+    outline:none;
+  }
+  /* dropdown option list — browser-controlled styling is limited, but we
+     can still set readable colors for the popup list itself */
+  .theme-select option{
+    background: var(--ink-deep);
+    color: var(--cream);
+  }
+
+  @media (max-width:480px){
+    .theme-switcher{ margin-top:26px; gap:10px; }
+    .theme-select{ min-width: 150px; font-size:13px; padding: 12px 34px 12px 16px; }
   }
 
   /* ================= 4b. BOTTOM CAPSULE PLAYER ================= */
@@ -228,9 +267,7 @@
     bottom: 46px;                 /* moved further up from the bottom edge */
     z-index:5;
     display:flex;
-    flex-direction:column;        /* stamp stacks above the capsule */
-    align-items:center;
-    gap: 12px;                    /* the "gap" between stamp and capsule */
+    justify-content:center;
     padding: 0 16px;
   }
 
@@ -263,6 +300,23 @@
     width:100%; height:100%;
     object-fit:cover;
     display:block;
+  }
+
+  /* "Rx" tag, now plain text (no pill/box) sitting centered above the
+     song title inside the capsule. Mint-green so it stays visible
+     against both the reddish and greenish tones in the background photo. */
+  .stamp-inline{
+    display:block;
+    align-self:center;
+    text-align:center;
+    color: var(--accent-mint);
+    font-family: var(--font-display);
+    font-size: 17px;              /* matches .capsule-title size */
+    font-weight:600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.55);
+    margin-bottom: 2px;
   }
 
   .capsule-info{
@@ -378,7 +432,7 @@
         <span id="onlineCount">128</span><span>&nbsp;online</span>
       </span>
 
-      <a href="https://music.youtube.com/playlist?list=PLeatb7hupNV_AWUl_7ttbsKeCQh8tF5N4&si=rEC7fxs1eJoxCN7Z" target="_blank" rel="noopener" class="yt-link" aria-label="Open full playlist on YouTube Music">
+      <a href="#" target="_blank" rel="noopener" class="yt-link" id="ytLink" aria-label="Open full playlist on YouTube Music">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
           <circle cx="12" cy="12" r="10"/>
           <circle cx="12" cy="12" r="6.3" fill="#06231F"/>
@@ -395,19 +449,26 @@
   <!-- CENTER: Hindi brand title, pinned higher on the page -->
   <main class="center">
     <h1 class="brand">मेडिकल स्टोर</h1>
+
+    <!-- CATEGORY + PLAYLIST selectors — category is the "master switch"
+         (changes background photo + default playlist), the second
+         dropdown lets you pick a specific playlist inside that category -->
+    <div class="theme-switcher">
+      <select id="categorySelect" class="theme-select" aria-label="Choose category"></select>
+      <select id="playlistSelect" class="theme-select" aria-label="Choose playlist"></select>
+    </div>
   </main>
 
-  <!-- BOTTOM: "Rx · now playing" stamp sits above the capsule with a gap,
-       then the floating capsule player (thumbnail, title/artist, controls) -->
+  <!-- BOTTOM: floating capsule player (thumbnail, "Rx · now playing" tag,
+       title/artist, controls) -->
   <div class="capsule-wrap">
-    <div class="stamp">Rx &middot; now playing</div>
-
     <div class="capsule">
       <div class="capsule-art">
         <img id="albumArt" src="" alt="Now playing artwork" />
       </div>
 
       <div class="capsule-info">
+        <span class="stamp-inline">Rx &middot; now playing</span>
         <span class="capsule-title" id="songTitle">Loading playlist…</span>
         <span class="capsule-artist" id="songArtist">Medical Store Radio</span>
         <div class="capsule-progress-track" id="progressTrack">
@@ -440,12 +501,57 @@
 
 <script>
   /* ================= 6. JS - CONFIG =================
-     Change these two values to point the page at a different
-     playlist or brand name. Everything else adapts automatically. */
+     Everything about categories lives here. To add/edit categories or
+     playlists, only touch this object — nothing else needs to change.
+
+     - key            -> internal id, doesn't need to match anything else
+     - label          -> shown in the "Category" dropdown
+     - background     -> path/URL to that category's background image
+                          (relative paths must exist in your repo, e.g.
+                          images/bollywood.png)
+     - playlists[]    -> the sub-playlists shown in the "Playlist" dropdown
+         - label       -> shown in the dropdown
+         - id          -> the YouTube playlist ID (the part after ?list= in
+                          any youtube.com or music.youtube.com playlist URL)
+
+     IMPORTANT: replace every 'REPLACE_WITH_...' below with your real
+     playlist IDs and image paths before deploying. */
   const CONFIG = {
-    PLAYLIST_ID: 'PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM', // your YouTube playlist
-    BRAND_NAME: 'Medical Store'
+    BRAND_NAME: 'Medical Store',
+    DEFAULT_CATEGORY: 'bollywood',
+
+    CATEGORIES: {
+      bollywood: {
+        label: 'Bollywood',
+        background: 'images/bollywood.png',
+        playlists: [
+          { label: "Late 90's Hits", id: 'REPLACE_WITH_90S_PLAYLIST_ID' },
+          { label: 'Old Songs',      id: 'REPLACE_WITH_OLD_SONGS_PLAYLIST_ID' },
+          { label: 'Mix Songs',      id: 'REPLACE_WITH_MIX_PLAYLIST_ID' }
+        ]
+      },
+      bhajan: {
+        label: 'Bhajan',
+        background: 'images/bhajan.png',
+        playlists: [
+          { label: 'Aarti',    id: 'REPLACE_WITH_AARTI_PLAYLIST_ID' },
+          { label: 'Bhajan',   id: 'REPLACE_WITH_BHAJAN_PLAYLIST_ID' },
+          { label: 'Chalisa',  id: 'REPLACE_WITH_CHALISA_PLAYLIST_ID' }
+        ]
+      },
+      lofi: {
+        label: 'Lofi',
+        background: 'images/lofi.png',
+        playlists: [
+          { label: 'Lofi Songs', id: 'PLeatb7hupNV_AWUl_7ttbsKeCQh8tF5N4' }
+        ]
+      }
+    }
   };
+
+  // ---- current selection state ----
+  let currentCategoryKey = CONFIG.DEFAULT_CATEGORY;
+  let currentPlaylistId  = CONFIG.CATEGORIES[currentCategoryKey].playlists[0].id;
 
   /* ================= 7. JS - YOUTUBE PLAYER SETUP ================= */
 
@@ -465,7 +571,7 @@
       width: '1',
       playerVars: {
         listType: 'playlist',
-        list: CONFIG.PLAYLIST_ID,
+        list: currentPlaylistId,
         autoplay: 1,
         controls: 0,     // hide YouTube's own UI, we use our own controls
         disablekb: 1,
@@ -503,6 +609,83 @@
   }
 
   /* ================= 8. JS - UI LOGIC ================= */
+
+  // ---- CATEGORY + PLAYLIST DROPDOWNS ----
+
+  const categorySelectEl = document.getElementById('categorySelect');
+  const playlistSelectEl = document.getElementById('playlistSelect');
+  const ytLinkEl = document.getElementById('ytLink');
+
+  // Fill the category dropdown once, from CONFIG.CATEGORIES.
+  function buildCategoryOptions() {
+    categorySelectEl.innerHTML = '';
+    Object.keys(CONFIG.CATEGORIES).forEach((key) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = CONFIG.CATEGORIES[key].label;
+      categorySelectEl.appendChild(opt);
+    });
+    categorySelectEl.value = currentCategoryKey;
+  }
+
+  // Rebuild the playlist dropdown to match whichever category is selected.
+  function buildPlaylistOptions(categoryKey) {
+    playlistSelectEl.innerHTML = '';
+    CONFIG.CATEGORIES[categoryKey].playlists.forEach((pl) => {
+      const opt = document.createElement('option');
+      opt.value = pl.id;
+      opt.textContent = pl.label;
+      playlistSelectEl.appendChild(opt);
+    });
+    playlistSelectEl.value = CONFIG.CATEGORIES[categoryKey].playlists[0].id;
+  }
+
+  // Swap the background photo for the selected category.
+  function applyBackground(categoryKey) {
+    const bgUrl = CONFIG.CATEGORIES[categoryKey].background;
+    document.documentElement.style.setProperty('--bg-image', `url('${bgUrl}')`);
+  }
+
+  // Point the header's YT Music icon at whatever is currently playing.
+  function updateHeaderLink(playlistId) {
+    ytLinkEl.href = `https://music.youtube.com/playlist?list=${playlistId}`;
+  }
+
+  // Tell the (already-created) YouTube player to load a different playlist,
+  // without reloading the whole page.
+  function switchPlaylist(playlistId) {
+    currentPlaylistId = playlistId;
+    updateHeaderLink(playlistId);
+
+    // Reset the capsule text while the new playlist's first track loads.
+    document.getElementById('songTitle').textContent = 'Loading playlist…';
+    document.getElementById('songArtist').textContent = CONFIG.BRAND_NAME;
+
+    if (player && typeof player.loadPlaylist === 'function') {
+      player.loadPlaylist({ list: playlistId, listType: 'playlist', index: 0 });
+    }
+    // If the player isn't ready yet, currentPlaylistId is already updated,
+    // so onPlayerReady's initial load will use the right playlist.
+  }
+
+  // ---- CATEGORY change: swap background, rebuild playlist list, play its first playlist ----
+  categorySelectEl.addEventListener('change', (e) => {
+    currentCategoryKey = e.target.value;
+    applyBackground(currentCategoryKey);
+    buildPlaylistOptions(currentCategoryKey);
+    switchPlaylist(CONFIG.CATEGORIES[currentCategoryKey].playlists[0].id);
+  });
+
+  // ---- PLAYLIST change (within the same category): just switch the playlist ----
+  playlistSelectEl.addEventListener('change', (e) => {
+    switchPlaylist(e.target.value);
+  });
+
+  // ---- initial setup on page load ----
+  buildCategoryOptions();
+  buildPlaylistOptions(currentCategoryKey);
+  applyBackground(currentCategoryKey);
+  updateHeaderLink(currentPlaylistId);
 
   function setPlayIcon(playing) {
     const icon = document.getElementById('playIcon');

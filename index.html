@@ -48,8 +48,10 @@
 
   /* ================= 3. CSS VARIABLES — EDIT PALETTE HERE ================= */
   :root{
-    /* --- CONFIG: swap this to change the background photo --- */
-    --bg-image: url('images/background.webp');
+    /* --- CONFIG: swap this to change the background photo ---
+       Using a relative path means the image must live in your repo
+       at this exact path: images/back.png */
+    --bg-image: url('images/back.png');
 
     /* colors */
     --ink-deep:    #06231F;   /* near-black teal, used only in small doses */
@@ -149,12 +151,22 @@
     justify-self:end;
     display:flex;
     align-items:center;
+    gap:8px;
+    padding: 6px 4px;             /* bigger touch target overall */
     color: var(--cream);
-    opacity:0.9;
+    text-decoration:none;
+    opacity:0.95;
     transition: opacity .15s ease, transform .15s ease;
     filter: drop-shadow(0 1px 6px rgba(0,0,0,0.6));
   }
-  .topbar-row1 .yt-link:hover{ opacity:1; transform: scale(1.08); color: var(--accent-mint); }
+  .topbar-row1 .yt-link:hover{ opacity:1; transform: scale(1.06); }
+  .yt-link-label{
+    font-family: var(--font-mono);
+    font-weight:700;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    color: var(--accent-red);       /* red label, easy to spot */
+  }
 
   /* row 2: tagline, sits BELOW the dashed line */
   .topbar-row2{
@@ -206,19 +218,63 @@
   }
 
   /* small "Rx" stamp badge under the title */
-  .stamp{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    padding: 7px 16px;
-    border: 1px solid var(--accent-red);
+  /* ================= CATEGORY + PLAYLIST DROPDOWNS ================= */
+  .theme-switcher{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap: 14px;
+    margin-top: 34px;
+  }
+
+  /* native <select>, custom-styled to match the glass/capsule look.
+     appearance:none removes the default OS arrow so we can draw our own. */
+  .theme-select{
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-width: 190px;
+    padding: 14px 40px 14px 20px;
     border-radius: 999px;
-    background: rgba(225,75,61,0.55);   /* light dull-red fill so the box itself
-                                            stands out against the red-toned photo */
-    color: var(--cream);                /* white text, now clearly readable */
-    font-size: 14px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    border: 1px solid var(--line);
+    background-color: var(--capsule-bg);
+    backdrop-filter: blur(var(--capsule-blur));
+    -webkit-backdrop-filter: blur(var(--capsule-blur));
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight:600;
+    letter-spacing: 0.04em;
+    cursor:pointer;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.4);
+
+    /* custom dropdown arrow drawn with a small inline SVG */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' stroke='%2379E6C4' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+  }
+  .theme-select:hover,
+  .theme-select:focus{
+    border-color: var(--accent-mint);
+    outline:none;
+  }
+  /* while a switch is in flight (see switchPlaylist() in JS), the
+     dropdowns are briefly disabled so a second click can't race the
+     first one — dim them so that's visually obvious, not just inert */
+  .theme-select:disabled{
+    opacity:0.5;
+    cursor: not-allowed;
+  }
+  /* dropdown option list — browser-controlled styling is limited, but we
+     can still set readable colors for the popup list itself */
+  .theme-select option{
+    background: var(--ink-deep);
+    color: var(--cream);
+  }
+
+  @media (max-width:480px){
+    .theme-switcher{ margin-top:26px; gap:10px; }
+    .theme-select{ min-width: 150px; font-size:13px; padding: 12px 34px 12px 16px; }
   }
 
   /* ================= 4b. BOTTOM CAPSULE PLAYER ================= */
@@ -228,9 +284,7 @@
     bottom: 46px;                 /* moved further up from the bottom edge */
     z-index:5;
     display:flex;
-    flex-direction:column;        /* stamp stacks above the capsule */
-    align-items:center;
-    gap: 12px;                    /* the "gap" between stamp and capsule */
+    justify-content:center;
     padding: 0 16px;
   }
 
@@ -263,6 +317,23 @@
     width:100%; height:100%;
     object-fit:cover;
     display:block;
+  }
+
+  /* "Rx" tag, now plain text (no pill/box) sitting centered above the
+     song title inside the capsule. Mint-green so it stays visible
+     against both the reddish and greenish tones in the background photo. */
+  .stamp-inline{
+    display:block;
+    align-self:center;
+    text-align:center;
+    color: var(--accent-mint);
+    font-family: var(--font-display);
+    font-size: 17px;              /* matches .capsule-title size */
+    font-weight:600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.55);
+    margin-bottom: 2px;
   }
 
   .capsule-info{
@@ -352,6 +423,7 @@
   /* small screens: tighten spacing but keep touch targets comfortable */
   @media (max-width:480px){
     .topbar-row1{ padding: 14px 16px 10px; font-size:13px; }
+    .yt-link-label{ font-size:12px; }
     .topbar-row2{ font-size:12px; }
     .capsule-wrap{ bottom: 34px; padding: 0 12px; }
     .capsule{ gap:10px; padding: 10px 14px 10px 10px; min-height:68px; }
@@ -378,14 +450,22 @@
         <span id="onlineCount">128</span><span>&nbsp;online</span>
       </span>
 
-      <a href="https://youtube.com/playlist?list=PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM" target="_blank" rel="noopener" class="yt-link" aria-label="Open full playlist on YouTube Music">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-          <circle cx="12" cy="12" r="10"/>
+      <!-- YT MUSIC BUTTON — temporarily hidden, kept here commented out
+           so it can be turned back on later by just removing this
+           comment wrapper.
+      <a href="#" target="_blank" rel="noopener" class="yt-link" id="ytLink" aria-label="Open full playlist on YouTube Music">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none">
+          <circle cx="12" cy="12" r="10" fill="var(--accent-red)"/>
           <circle cx="12" cy="12" r="6.3" fill="#06231F"/>
-          <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
-          <path d="M10.5 9.2v5.6l4.8-2.8z" fill="#06231F"/>
+          <path d="M10.3 9v6l5.2-3z" fill="var(--accent-red)"/>
         </svg>
+        <span class="yt-link-label">YT&nbsp;Music</span>
       </a>
+      -->
+      <span></span> <!-- empty placeholder so the row1 3-column grid still
+                          centers the online count correctly with nothing
+                          on the right side -->
+
     </div>
 
     <!-- HEADER row 2: tagline, sits below the dashed divider -->
@@ -395,19 +475,26 @@
   <!-- CENTER: Hindi brand title, pinned higher on the page -->
   <main class="center">
     <h1 class="brand">मेडिकल स्टोर</h1>
+
+    <!-- CATEGORY + PLAYLIST selectors — category is the "master switch"
+         (changes background photo + default playlist), the second
+         dropdown lets you pick a specific playlist inside that category -->
+    <div class="theme-switcher">
+      <select id="categorySelect" class="theme-select" aria-label="Choose category"></select>
+      <select id="playlistSelect" class="theme-select" aria-label="Choose playlist"></select>
+    </div>
   </main>
 
-  <!-- BOTTOM: "Rx · now playing" stamp sits above the capsule with a gap,
-       then the floating capsule player (thumbnail, title/artist, controls) -->
+  <!-- BOTTOM: floating capsule player (thumbnail, "Rx · now playing" tag,
+       title/artist, controls) -->
   <div class="capsule-wrap">
-    <div class="stamp">Rx &middot; now playing</div>
-
     <div class="capsule">
       <div class="capsule-art">
         <img id="albumArt" src="" alt="Now playing artwork" />
       </div>
 
       <div class="capsule-info">
+        <span class="stamp-inline">Rx &middot; now playing</span>
         <span class="capsule-title" id="songTitle">Loading playlist…</span>
         <span class="capsule-artist" id="songArtist">Medical Store Radio</span>
         <div class="capsule-progress-track" id="progressTrack">
@@ -435,17 +522,76 @@
     </div>
   </div>
 
-  <!-- Hidden YouTube player: only audio is used, no video chrome/ads shown -->
-  <div id="ytPlayer" style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0;"></div>
+  <!-- Hidden YouTube player: only audio is used, no video chrome/ads shown.
+       ytPlayerWrap stays in the DOM permanently; the inner #ytPlayer div
+       gets rebuilt each time we switch playlists (see createPlayer() in
+       the script) because YT's player.destroy() removes its target
+       element entirely, so we need a fresh one to build the next player on. -->
+  <div id="ytPlayerWrap" style="position:absolute; width:1px; height:1px; overflow:hidden; opacity:0;">
+    <div id="ytPlayer"></div>
+  </div>
 
 <script>
   /* ================= 6. JS - CONFIG =================
-     Change these two values to point the page at a different
-     playlist or brand name. Everything else adapts automatically. */
+     Everything about categories lives here. To add/edit categories or
+     playlists, only touch this object — nothing else needs to change.
+
+     - key            -> internal id, doesn't need to match anything else
+     - label          -> shown in the "Category" dropdown
+     - background     -> path/URL to that category's background image
+                          (relative paths must exist in your repo, e.g.
+                          images/bollywood.png)
+     - playlists[]    -> the sub-playlists shown in the "Playlist" dropdown
+         - label       -> shown in the dropdown
+         - id          -> the YouTube playlist ID (the part after ?list= in
+                          any youtube.com or music.youtube.com playlist URL)
+
+     IMPORTANT: replace every 'REPLACE_WITH_...' below with your real
+     playlist IDs and image paths before deploying. */
   const CONFIG = {
-    PLAYLIST_ID: 'PLq-bT4s33RYADNkcClDkLPovaKJx0HTDM', // your YouTube playlist
-    BRAND_NAME: 'Medical Store'
+    BRAND_NAME: 'Medical Store',
+    DEFAULT_CATEGORY: 'bollywood',
+
+    CATEGORIES: {
+      bollywood: {
+        label: 'Bollywood',
+        background: 'images/bollywood.png',
+        playlists: [
+          { label: "90's Hits",           id: 'PLMRKdK25AuPVjHl9Kdb-gkBy0Cm7Zi2xo' },
+          { label: "20's Hits",           id: 'PL71gzSkiT0QkByFoGuRrMfeWQhywnyGDO' },
+          { label: "Old (70's & 80's)",   id: 'PLEr9IYC4OqwElx92aeffYkJRbIWN7ocYc' },
+          { label: 'Emraan Hashmi Songs', id: 'PLypd8gqw_otEo8OeMSOEAkUm5WhuX_qcI' }
+        ]
+      },
+      bhajan: {
+        label: 'Bhajan',
+        background: 'images/bhajan.webp',
+        playlists: [
+          { label: "Aarti's",   id: 'PLn8iYdRmM3lpFUyO235CqLTXOuNnyO5pX' },
+          { label: "Bhajan's",  id: 'PL9bw4S5ePsEE0jGfUgUMvzeWAaMPcqHL9' },
+          { label: 'Lofi Bhajan', id: 'PLuH-I1ovyzeioJ_j4DcQgoxtAbgBc3YD2' }
+        ]
+      },
+      lofi: {
+        label: 'Lofi',
+        background: 'images/lofi.webp',
+        playlists: [
+          { label: 'All Mix',   id: 'PLgxs93BSP-hrI_pMZT28kVmGcvfFq234b' },
+          { label: "KK's Best", id: 'PLwceFViR-lwJgOoeIoyvviXOQFR625Ff9' }
+        ]
+      }
+    }
   };
+
+  // ---- current selection state ----
+  let currentCategoryKey = CONFIG.DEFAULT_CATEGORY;
+  let currentPlaylistId  = CONFIG.CATEGORIES[currentCategoryKey].playlists[0].id;
+
+  // Bumped every time the user switches playlist. Any in-flight event
+  // that started before the bump is considered "stale" and ignored —
+  // this is what prevents the bug where quickly switching sub-categories
+  // could show/play the WRONG (previous) playlist's song.
+  let switchToken = 0;
 
   /* ================= 7. JS - YOUTUBE PLAYER SETUP ================= */
 
@@ -458,25 +604,46 @@
   let isPlaying = false;
   let progressTimer = null; // interval used to update the progress bar
 
-  // Called automatically by the YouTube API once it has loaded.
-  window.onYouTubeIframeAPIReady = function () {
+  // Builds (or rebuilds) the YouTube player for a given playlist ID.
+  // We fully destroy() the old player and create a brand new one instead
+  // of using player.loadPlaylist() on the existing player — loadPlaylist()
+  // turned out to be unreliable across playlist switches (stale internal
+  // state, occasional wrong-track playback). Destroy + recreate guarantees
+  // a completely clean player every time, at the cost of a ~1 second gap
+  // (covered by the "Loading playlist…" text in the capsule).
+  function createPlayer(playlistId) {
+    if (player && typeof player.destroy === 'function') {
+      player.destroy(); // this also removes the #ytPlayer element itself
+    }
+
+    // destroy() removes its target element, so rebuild a fresh one
+    // inside the permanent wrapper before creating the next player.
+    const wrap = document.getElementById('ytPlayerWrap');
+    wrap.innerHTML = '<div id="ytPlayer"></div>';
+
     player = new YT.Player('ytPlayer', {
       height: '1',
       width: '1',
       playerVars: {
         listType: 'playlist',
-        list: CONFIG.PLAYLIST_ID,
+        list: playlistId,
         autoplay: 1,
         controls: 0,     // hide YouTube's own UI, we use our own controls
         disablekb: 1,
         modestbranding: 1,
-        rel: 0
+        rel: 0,
+        origin: window.location.origin
       },
       events: {
         onReady: onPlayerReady,
         onStateChange: onPlayerStateChange
       }
     });
+  }
+
+  // Called automatically by the YouTube API once it has loaded.
+  window.onYouTubeIframeAPIReady = function () {
+    createPlayer(currentPlaylistId);
   };
 
   function onPlayerReady() {
@@ -490,6 +657,11 @@
       setPlayIcon(true);
       updateNowPlayingInfo();
       startProgressTimer();
+
+      // A switch (if one was in flight) has now definitely completed —
+      // safe to let the user pick another category/playlist again.
+      categorySelectEl.disabled = false;
+      playlistSelectEl.disabled = false;
     } else if (event.data === YT.PlayerState.PAUSED) {
       isPlaying = false;
       setPlayIcon(false);
@@ -503,6 +675,109 @@
   }
 
   /* ================= 8. JS - UI LOGIC ================= */
+
+  // ---- CATEGORY + PLAYLIST DROPDOWNS ----
+
+  const categorySelectEl = document.getElementById('categorySelect');
+  const playlistSelectEl = document.getElementById('playlistSelect');
+  const ytLinkEl = document.getElementById('ytLink');
+
+  // Fill the category dropdown once, from CONFIG.CATEGORIES.
+  function buildCategoryOptions() {
+    categorySelectEl.innerHTML = '';
+    Object.keys(CONFIG.CATEGORIES).forEach((key) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = CONFIG.CATEGORIES[key].label;
+      categorySelectEl.appendChild(opt);
+    });
+    categorySelectEl.value = currentCategoryKey;
+  }
+
+  // Rebuild the playlist dropdown to match whichever category is selected.
+  function buildPlaylistOptions(categoryKey) {
+    playlistSelectEl.innerHTML = '';
+    CONFIG.CATEGORIES[categoryKey].playlists.forEach((pl) => {
+      const opt = document.createElement('option');
+      opt.value = pl.id;
+      opt.textContent = pl.label;
+      playlistSelectEl.appendChild(opt);
+    });
+    playlistSelectEl.value = CONFIG.CATEGORIES[categoryKey].playlists[0].id;
+  }
+
+  // Swap the background photo for the selected category.
+  function applyBackground(categoryKey) {
+    const bgUrl = CONFIG.CATEGORIES[categoryKey].background;
+    document.documentElement.style.setProperty('--bg-image', `url('${bgUrl}')`);
+  }
+
+  // Point the header's YT Music icon at whatever is currently playing.
+  // NOTE: the button itself is currently commented out in the HTML (see
+  // the <!-- YT MUSIC BUTTON --> block above), so ytLinkEl will be null
+  // until it's restored — this guard just keeps that safe either way.
+  function updateHeaderLink(playlistId) {
+    if (!ytLinkEl) return;
+    ytLinkEl.href = `https://music.youtube.com/playlist?list=${playlistId}`;
+  }
+
+  // Switch to a different playlist by fully rebuilding the player
+  // (see createPlayer() above for why — it's far more reliable than
+  // calling loadPlaylist() on the existing player instance).
+  function switchPlaylist(playlistId) {
+    switchToken++;               // any late event from an OLDER switch is now stale
+    currentPlaylistId = playlistId;
+    updateHeaderLink(playlistId);
+
+    // Reset the capsule text/art while the new playlist's first track loads.
+    document.getElementById('songTitle').textContent = 'Loading playlist…';
+    document.getElementById('songArtist').textContent = CONFIG.BRAND_NAME;
+    document.getElementById('albumArt').src = '';
+    document.getElementById('progressFill').style.width = '0%';
+    stopProgressTimer();
+
+    // Disable both dropdowns until the new playlist actually starts
+    // playing — stops a second click from racing an in-progress switch.
+    categorySelectEl.disabled = true;
+    playlistSelectEl.disabled = true;
+
+    if (typeof YT !== 'undefined' && YT.Player) {
+      createPlayer(playlistId);
+    }
+    // If the YouTube API script itself hasn't finished loading yet,
+    // currentPlaylistId is already updated, so onYouTubeIframeAPIReady's
+    // createPlayer(currentPlaylistId) call will use the right playlist.
+
+    // Safety net: if PLAYING never fires (slow network, buffering issue,
+    // etc.) the dropdowns would otherwise stay disabled forever — force
+    // re-enable them after a few seconds just in case.
+    const myToken = switchToken;
+    setTimeout(() => {
+      if (switchToken === myToken) {
+        categorySelectEl.disabled = false;
+        playlistSelectEl.disabled = false;
+      }
+    }, 6000);
+  }
+
+  // ---- CATEGORY change: swap background, rebuild playlist list, play its first playlist ----
+  categorySelectEl.addEventListener('change', (e) => {
+    currentCategoryKey = e.target.value;
+    applyBackground(currentCategoryKey);
+    buildPlaylistOptions(currentCategoryKey);
+    switchPlaylist(CONFIG.CATEGORIES[currentCategoryKey].playlists[0].id);
+  });
+
+  // ---- PLAYLIST change (within the same category): just switch the playlist ----
+  playlistSelectEl.addEventListener('change', (e) => {
+    switchPlaylist(e.target.value);
+  });
+
+  // ---- initial setup on page load ----
+  buildCategoryOptions();
+  buildPlaylistOptions(currentCategoryKey);
+  applyBackground(currentCategoryKey);
+  updateHeaderLink(currentPlaylistId);
 
   function setPlayIcon(playing) {
     const icon = document.getElementById('playIcon');

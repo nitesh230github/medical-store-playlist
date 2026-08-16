@@ -258,6 +258,13 @@
     border-color: var(--accent-mint);
     outline:none;
   }
+  /* while a switch is in flight (see switchPlaylist() in JS), the
+     dropdowns are briefly disabled so a second click can't race the
+     first one — dim them so that's visually obvious, not just inert */
+  .theme-select:disabled{
+    opacity:0.5;
+    cursor: not-allowed;
+  }
   /* dropdown option list — browser-controlled styling is limited, but we
      can still set readable colors for the popup list itself */
   .theme-select option{
@@ -574,6 +581,12 @@
   let currentCategoryKey = CONFIG.DEFAULT_CATEGORY;
   let currentPlaylistId  = CONFIG.CATEGORIES[currentCategoryKey].playlists[0].id;
 
+  // Bumped every time the user switches playlist. Any in-flight event
+  // that started before the bump is considered "stale" and ignored —
+  // this is what prevents the bug where quickly switching sub-categories
+  // could show/play the WRONG (previous) playlist's song.
+  let switchToken = 0;
+
   /* ================= 7. JS - YOUTUBE PLAYER SETUP ================= */
 
   // Load the YouTube IFrame API script asynchronously.
@@ -597,7 +610,10 @@
         controls: 0,     // hide YouTube's own UI, we use our own controls
         disablekb: 1,
         modestbranding: 1,
-        rel: 0
+        rel: 0,
+        origin: window.location.origin   // fixes the common "postMessage
+                                          // target origin" console warning
+                                          // and makes API calls more reliable
       },
       events: {
         onReady: onPlayerReady,
@@ -617,6 +633,11 @@
       setPlayIcon(true);
       updateNowPlayingInfo();
       startProgressTimer();
+
+      // A switch (if one was in flight) has now definitely completed —
+      // safe to let the user pick another category/playlist again.
+      categorySelectEl.disabled = false;
+      playlistSelectEl.disabled = false;
     } else if (event.data === YT.PlayerState.PAUSED) {
       isPlaying = false;
       setPlayIcon(false);
@@ -679,6 +700,7 @@
   // Tell the (already-created) YouTube player to load a different playlist,
   // without reloading the whole page.
   function switchPlaylist(playlistId) {
+    switchToken++;               // any late event from an OLDER switch is now stale
     currentPlaylistId = playlistId;
     updateHeaderLink(playlistId);
 
@@ -686,11 +708,31 @@
     document.getElementById('songTitle').textContent = 'Loading playlist…';
     document.getElementById('songArtist').textContent = CONFIG.BRAND_NAME;
 
+    // Disable both dropdowns until the new playlist actually starts
+    // playing — this is what stops the bug where quickly picking
+    // another sub-category mid-switch could end up playing the wrong
+    // (previous) playlist: only one switch can be "in flight" at a time.
+    categorySelectEl.disabled = true;
+    playlistSelectEl.disabled = true;
+
     if (player && typeof player.loadPlaylist === 'function') {
       player.loadPlaylist({ list: playlistId, listType: 'playlist', index: 0 });
     }
+
+    // Safety net: if PLAYING never fires (slow network, buffering issue,
+    // etc.) the dropdowns would otherwise stay disabled forever — force
+    // re-enable them after a few seconds just in case.
+    const myToken = switchToken;
+    setTimeout(() => {
+      if (switchToken === myToken) {
+        categorySelectEl.disabled = false;
+        playlistSelectEl.disabled = false;
+      }
+    }, 6000);
     // If the player isn't ready yet, currentPlaylistId is already updated,
-    // so onPlayerReady's initial load will use the right playlist.
+    // so onPlayerReady's initial load will use the right playlist — and
+    // the dropdowns get re-enabled once onPlayerStateChange first fires
+    // PLAYING (see below).
   }
 
   // ---- CATEGORY change: swap background, rebuild playlist list, play its first playlist ----

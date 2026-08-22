@@ -557,7 +557,7 @@
         label: 'Bollywood',
         background: 'images/bollywood.png',
         playlists: [
-          { label: "90's Hits",           id: 'PLAFjPVdERAkt7jNU1XW7EWXHLyYyf7Sux' },
+          { label: "90's Hits",           id: 'PLMRKdK25AuPVjHl9Kdb-gkBy0Cm7Zi2xo' },
           { label: "20's Hits",           id: 'PL71gzSkiT0QkByFoGuRrMfeWQhywnyGDO' },
           { label: "Old (70's & 80's)",   id: 'PLEr9IYC4OqwElx92aeffYkJRbIWN7ocYc' },
           { label: 'Emraan Hashmi Songs', id: 'PLypd8gqw_otEo8OeMSOEAkUm5WhuX_qcI' }
@@ -604,6 +604,11 @@
   let isPlaying = false;
   let progressTimer = null; // interval used to update the progress bar
 
+  // Tracks whether we've already jumped to a random track for the
+  // CURRENT player instance. Reset to false every time createPlayer()
+  // builds a fresh player (page load, or any category/playlist switch).
+  let hasRandomizedForCurrentPlayer = false;
+
   // Builds (or rebuilds) the YouTube player for a given playlist ID.
   // We fully destroy() the old player and create a brand new one instead
   // of using player.loadPlaylist() on the existing player — loadPlaylist()
@@ -615,6 +620,8 @@
     if (player && typeof player.destroy === 'function') {
       player.destroy(); // this also removes the #ytPlayer element itself
     }
+
+    hasRandomizedForCurrentPlayer = false; // this is a brand-new player/session
 
     // destroy() removes its target element, so rebuild a fresh one
     // inside the permanent wrapper before creating the next player.
@@ -653,6 +660,34 @@
 
   function onPlayerStateChange(event) {
     if (event.data === YT.PlayerState.PLAYING) {
+
+      // ---- RANDOM STARTING TRACK ----
+      // The very first time this player instance reaches PLAYING, it's
+      // always sitting on track index 0 (whatever loaded first). Before
+      // showing/announcing that track, jump once to a random index using
+      // the playlist's REAL length (via getPlaylist(), which works for
+      // any playlist size — no need to know song counts in advance).
+      // This runs for every category AND every sub-playlist, since they
+      // all go through createPlayer().
+      if (!hasRandomizedForCurrentPlayer) {
+        hasRandomizedForCurrentPlayer = true; // only ever do this once per player
+        const list = (typeof player.getPlaylist === 'function') ? player.getPlaylist() : null;
+
+        if (list && list.length > 1) {
+          const randomIndex = Math.floor(Math.random() * list.length);
+          if (randomIndex !== 0) {
+            player.playVideoAt(randomIndex);
+            return; // skip UI updates for the throwaway first track —
+                     // playVideoAt() triggers another PLAYING event for
+                     // the actual random track, which the code below
+                     // (hasRandomizedForCurrentPlayer is now true) will
+                     // handle normally.
+          }
+        }
+        // If the random pick happened to be 0, or the playlist has only
+        // one song, just fall through to normal handling below.
+      }
+
       isPlaying = true;
       setPlayIcon(true);
       updateNowPlayingInfo();
